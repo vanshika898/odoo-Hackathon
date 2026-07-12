@@ -101,6 +101,7 @@ const UserSchema = new mongoose.Schema(
         "Admin",
         "FleetManager",
         "Dispatcher",
+        "Driver",
         "SafetyOfficer",
         "FinancialAnalyst",
       ],

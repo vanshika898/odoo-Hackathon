@@ -1,7 +1,7 @@
 const Profile = require("../models/Profile");
 const crypto = require("crypto");
 
-const user = require("../models/UserModel");
+const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const mailSender = require("../utils/mailSender")
@@ -32,6 +32,7 @@ exports.signup = async (req, res) => {
         "Admin",
         "FleetManager",
         "Dispatcher",
+        "Driver",
         "SafetyOfficer",
         "FinancialAnalyst",
       ].includes(accountType)
@@ -43,7 +44,7 @@ exports.signup = async (req, res) => {
     }
 
     //check if user already exists
-    const existingUser = await user.findOne({ email: email });
+    const existingUser = await User.findOne({ email: email });
 
     if (existingUser) {
       return res.status(400).json({
@@ -66,7 +67,7 @@ exports.signup = async (req, res) => {
     });
 
     // create the user in db
-    const newUser = await user.create({
+    const newUser = await User.create({
      fullName,
       email,
       password: hashPassword,
@@ -176,7 +177,7 @@ exports.login = async (req, res) => {
     }
 
     //check if user exists
-    const existingUser = await user.findOne({ email: email });
+    const existingUser = await User.findOne({ email: email });
     if (!existingUser) {
       return res.status(400).json({
         success: false,
@@ -305,6 +306,35 @@ exports.changePassword = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Password could not be changed",
+      error: error.message,
+    });
+  }
+};
+
+// Get current logged in user details
+exports.getMe = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const currentUser = await User.findById(userId)
+      .select("-password")
+      .populate("additionalDetails");
+      
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user: currentUser,
+    });
+  } catch (error) {
+    console.error("getMe error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Could not retrieve user data",
       error: error.message,
     });
   }

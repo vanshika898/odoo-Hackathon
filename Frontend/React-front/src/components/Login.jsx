@@ -1,15 +1,34 @@
 import React, { useState } from 'react';
+import { api } from '../api';
 
 export default function Login({ onLoginSuccess }) {
   const [creds, setCreds] = useState({ email: '', password: '' });
-  const [error, setError] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (creds.email === 'tishajain603@gmail.com' && creds.password === '123456') {
-      onLoginSuccess();
-    } else {
-      setError(true);
+    setErrorMsg('');
+    setLoading(true);
+
+    try {
+      const res = await api.post('/auth/login', {
+        email: creds.email,
+        password: creds.password,
+      });
+
+      if (res.success && res.user) {
+        // Access token is embedded inside the user object returned from login
+        const token = res.user.token;
+        onLoginSuccess(res.user, token);
+      } else {
+        setErrorMsg(res.message || 'Login rejection. Invalid credentials.');
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err.message || 'Connection failure to TransitOps server.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -25,18 +44,47 @@ export default function Login({ onLoginSuccess }) {
 
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', marginBottom: '6px' }}>BUSINESS CONTROL EMAIL *</label>
-            <input type="email" placeholder="Raven.k@transitops.in" className="loadswift-input" required onChange={e => setCreds({...creds, email: e.target.value})} />
+            <input 
+              type="email" 
+              placeholder="operator@transitops.in" 
+              className="loadswift-input" 
+              required 
+              onChange={e => setCreds({...creds, email: e.target.value})} 
+              disabled={loading}
+            />
           </div>
 
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', marginBottom: '6px' }}>SECURE ACCESS PIN PASSWORD *</label>
-            <input type="password" placeholder="••••••••" className="loadswift-input" required onChange={e => setCreds({...creds, password: e.target.value})} />
+            <input 
+              type="password" 
+              placeholder="••••••••" 
+              className="loadswift-input" 
+              required 
+              onChange={e => setCreds({...creds, password: e.target.value})} 
+              disabled={loading}
+            />
           </div>
 
-          {error && <p style={{ color: 'var(--text-retired)', fontSize: '0.85rem', fontWeight: '600' }}>❌ Authorization loop rejection: Input values invalid.</p>}
+          {errorMsg && <p style={{ color: 'var(--text-retired)', fontSize: '0.85rem', fontWeight: '600' }}>❌ {errorMsg}</p>}
 
-          <button type="submit" style={{ background: 'var(--text-dark)', color: '#fff', border: 'none', padding: '14px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem', marginTop: '10px' }}>
-            Continue to Operations Board
+          <button 
+            type="submit" 
+            style={{ 
+              background: 'var(--text-dark)', 
+              color: '#fff', 
+              border: 'none', 
+              padding: '14px', 
+              borderRadius: '8px', 
+              cursor: loading ? 'not-allowed' : 'pointer', 
+              fontWeight: '700', 
+              fontSize: '0.95rem', 
+              marginTop: '10px',
+              opacity: loading ? 0.7 : 1
+            }}
+            disabled={loading}
+          >
+            {loading ? 'Authenticating Gateway...' : 'Continue to Operations Board'}
           </button>
         </form>
       </div>

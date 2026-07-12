@@ -1,33 +1,476 @@
-import React, { useMemo, useState } from "react";
-import { ArrowDownRight, ArrowUpRight, ChevronDown, CircleDollarSign, Fuel, Plus, ReceiptText, Search, WalletCards } from "lucide-react";
-import { mockFuelLogs, mockOtherExpenses } from "../mockData";
+import React, { useEffect, useState } from "react";
+import { ChevronDown, Download, Fuel, MoreHorizontal, Plus, DollarSign, X } from "lucide-react";
+import { api } from "../api";
 
-export default function Expenses() {
-  const [query, setQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("Fuel logs");
-  const [period, setPeriod] = useState("This month");
-  const fuelLogs = useMemo(() => mockFuelLogs.filter((log) => `${log.vehicle} ${log.date}`.toLowerCase().includes(query.toLowerCase())), [query]);
-  const routeCosts = useMemo(() => mockOtherExpenses.filter((expense) => `${expense.id} ${expense.vehicle}`.toLowerCase().includes(query.toLowerCase())), [query]);
-  const fuelTotal = mockFuelLogs.reduce((total, log) => total + Number(log.cost.replace(",", "")), 0);
-  const routeTotal = mockOtherExpenses.reduce((total, expense) => total + expense.toll + expense.other + expense.maintenance, 0);
+export default function Expenses({ user }) {
+  const [activeTab, setActiveTab] = useState("fuel"); // "fuel" or "expenses"
+  
+  const [fuelLogs, setFuelLogs] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+  const [trips, setTrips] = useState([]);
+  
+  const [loading, setLoading] = useState(true);
 
-  return <div className="expenses-page">
-    <header className="expenses-header"><div><span className="expenses-eyebrow">Cost control</span><h1>Expenses</h1><p>Track fleet spending and route costs in one place.</p></div><button className="expenses-add-button" type="button"><Plus size={17} /> Add expense</button></header>
+  // Modals
+  const [showFuelModal, setShowFuelModal] = useState(false);
+  const [fuelForm, setFuelForm] = useState({
+    vehicleId: "",
+    tripId: "",
+    liters: "",
+    cost: "",
+    odometerAtFillup: ""
+  });
+  const [fuelError, setFuelError] = useState("");
+  const [fuelSaving, setFuelSaving] = useState(false);
 
-    <section className="expenses-summary-grid">
-      <article><span className="expenses-summary-icon"><WalletCards size={17} /></span><div><span>Total spend</span><strong>₹32,460</strong><small><ArrowDownRight size={13} /> 8.6% vs last month</small></div></article>
-      <article><span className="expenses-summary-icon is-yellow"><Fuel size={17} /></span><div><span>Fuel spend</span><strong>₹{fuelTotal.toLocaleString()}</strong><small>180 L logged this month</small></div></article>
-      <article><span className="expenses-summary-icon is-blue"><ReceiptText size={17} /></span><div><span>Route costs</span><strong>₹{routeTotal.toLocaleString()}</strong><small><ArrowUpRight size={13} /> 2 active trip entries</small></div></article>
-      <article><span className="expenses-summary-icon is-green"><CircleDollarSign size={17} /></span><div><span>Budget remaining</span><strong>₹38,840</strong><small>54% of monthly budget</small></div></article>
-    </section>
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [expenseForm, setExpenseForm] = useState({
+    vehicleId: "",
+    tripId: "",
+    type: "Toll",
+    amount: "",
+    notes: ""
+  });
+  const [expenseError, setExpenseError] = useState("");
+  const [expenseSaving, setExpenseSaving] = useState(false);
 
-    <section className="expenses-ledger">
-      <div className="expenses-ledger-heading"><div><h2>Expense activity</h2><p>A detailed view of your latest fleet costs.</p></div><div className="expenses-period"><select aria-label="Expense period" value={period} onChange={(event) => setPeriod(event.target.value)}><option>This month</option><option>Last month</option><option>This quarter</option></select><ChevronDown size={14} /></div></div>
-      <div className="expenses-controls"><div className="expenses-tabs">{["Fuel logs", "Route costs"].map((tab) => <button key={tab} className={activeTab === tab ? "is-active" : ""} type="button" onClick={() => setActiveTab(tab)}>{tab}<span>{tab === "Fuel logs" ? mockFuelLogs.length : mockOtherExpenses.length}</span></button>)}</div><div className="expenses-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={activeTab === "Fuel logs" ? "Search vehicle or date" : "Search trip or vehicle"} /></div></div>
-      {activeTab === "Fuel logs" ? <div className="expenses-table-wrap"><table className="expenses-table"><thead><tr><th>Vehicle</th><th>Log date</th><th>Fuel volume</th><th>Cost</th><th>Cost / litre</th><th>Status</th></tr></thead><tbody>{fuelLogs.map((log) => <tr key={log.id}><td><span className="expenses-vehicle"><Fuel size={15} />{log.vehicle}</span></td><td>{log.date}</td><td>{log.liters}</td><td><strong>₹{log.cost}</strong></td><td>₹75.00</td><td><span className="expense-status expense-recorded">Recorded</span></td></tr>)}</tbody></table>{!fuelLogs.length && <EmptyState />}</div> : <div className="expenses-table-wrap"><table className="expenses-table"><thead><tr><th>Trip</th><th>Vehicle</th><th>Toll</th><th>Other costs</th><th>Maintenance</th><th>Total</th></tr></thead><tbody>{routeCosts.map((expense) => <tr key={expense.id}><td><strong className="expenses-trip-id">#{expense.id}</strong></td><td>{expense.vehicle}</td><td>₹{expense.toll.toLocaleString()}</td><td>₹{expense.other.toLocaleString()}</td><td>₹{expense.maintenance.toLocaleString()}</td><td><strong>₹{(expense.toll + expense.other + expense.maintenance).toLocaleString()}</strong></td></tr>)}</tbody></table>{!routeCosts.length && <EmptyState />}</div>}
-      <footer className="expenses-ledger-footer"><span>Showing activity for <strong>{period.toLowerCase()}</strong></span><button type="button">Download report <ArrowDownRight size={14} /></button></footer>
-    </section>
-  </div>;
+  // Permissions
+  const isFleetManager = user?.accountType === "FleetManager";
+  const isFinancialAnalyst = user?.accountType === "FinancialAnalyst";
+  const isDriver = user?.accountType === "Driver";
+  const isAdmin = user?.accountType === "Admin";
+
+  const canWrite = isFleetManager || isDriver || isAdmin;
+  const canRead = isFleetManager || isFinancialAnalyst || isAdmin;
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      if (canRead) {
+        const fuelRes = await api.get("/fuel-logs");
+        if (fuelRes.success && fuelRes.logs) {
+          setFuelLogs(fuelRes.logs);
+        }
+
+        const expRes = await api.get("/expenses");
+        if (expRes.success && expRes.expenses) {
+          setExpenses(expRes.expenses);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load logs:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadDropdowns = async () => {
+    try {
+      const vRes = await api.get("/vehicles");
+      if (vRes.success && vRes.vehicles) {
+        setVehicles(vRes.vehicles.filter(v => v.status !== "Retired"));
+      }
+
+      const tRes = await api.get("/trips");
+      if (tRes.success && tRes.trips) {
+        // Only active/completed trips
+        setTrips(tRes.trips.filter(t => t.status === "Dispatched" || t.status === "Completed"));
+      }
+    } catch (error) {
+      console.error("Failed to load dropdown assets:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [user]);
+
+  const handleOpenFuelModal = () => {
+    setFuelError("");
+    loadDropdowns();
+    setShowFuelModal(true);
+  };
+
+  const handleOpenExpenseModal = () => {
+    setExpenseError("");
+    loadDropdowns();
+    setShowExpenseModal(true);
+  };
+
+  const handleLogFuel = async (e) => {
+    e.preventDefault();
+    setFuelError("");
+    setFuelSaving(true);
+
+    try {
+      const payload = {
+        vehicleId: fuelForm.vehicleId,
+        tripId: fuelForm.tripId || undefined,
+        liters: Number(fuelForm.liters),
+        cost: Number(fuelForm.cost),
+        odometerAtFillup: fuelForm.odometerAtFillup ? Number(fuelForm.odometerAtFillup) : undefined
+      };
+
+      const res = await api.post("/fuel-logs", payload);
+      if (res.success) {
+        setShowFuelModal(false);
+        setFuelForm({ vehicleId: "", tripId: "", liters: "", cost: "", odometerAtFillup: "" });
+        fetchData();
+      }
+    } catch (error) {
+      setFuelError(error.message || "Failed to log fuel refill");
+    } finally {
+      setFuelSaving(false);
+    }
+  };
+
+  const handleLogExpense = async (e) => {
+    e.preventDefault();
+    setExpenseError("");
+    setExpenseSaving(true);
+
+    try {
+      const payload = {
+        vehicleId: expenseForm.vehicleId,
+        tripId: expenseForm.tripId || undefined,
+        type: expenseForm.type,
+        amount: Number(expenseForm.amount),
+        notes: expenseForm.notes
+      };
+
+      const res = await api.post("/expenses", payload);
+      if (res.success) {
+        setShowExpenseModal(false);
+        setExpenseForm({ vehicleId: "", tripId: "", type: "Toll", amount: "", notes: "" });
+        fetchData();
+      }
+    } catch (error) {
+      setExpenseError(error.message || "Failed to log expense");
+    } finally {
+      setExpenseSaving(false);
+    }
+  };
+
+  return (
+    <div className="expenses-page">
+      <header className="fleet-header">
+        <div>
+          <span className="fleet-eyebrow">Financial controls</span>
+          <h1>Fuel & Expenses</h1>
+          <p>Monitor operational costs, log refills, and route expenses.</p>
+        </div>
+        <div className="fleet-header-actions" style={{ display: "flex", gap: "10px" }}>
+          {canWrite && (
+            <>
+              <button className="fleet-export-button" type="button" onClick={handleOpenFuelModal}>
+                <Plus size={16} /> Log Fuel
+              </button>
+              <button className="fleet-add-button" type="button" onClick={handleOpenExpenseModal}>
+                <Plus size={17} /> Log Expense
+              </button>
+            </>
+          )}
+        </div>
+      </header>
+
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: "20px", marginBottom: "20px", borderBottom: "1px solid var(--border-muted)", paddingBottom: "10px" }}>
+        <button 
+          onClick={() => setActiveTab("fuel")}
+          style={{ 
+            background: "none", border: "none", padding: "10px 20px", fontSize: "1rem", fontWeight: "700",
+            color: activeTab === "fuel" ? "var(--text-dark)" : "var(--text-muted)",
+            borderBottom: activeTab === "fuel" ? "3px solid var(--accent-gold)" : "none",
+            cursor: "pointer"
+          }}
+        >
+          Fuel Logs
+        </button>
+        <button 
+          onClick={() => setActiveTab("expenses")}
+          style={{ 
+            background: "none", border: "none", padding: "10px 20px", fontSize: "1rem", fontWeight: "700",
+            color: activeTab === "expenses" ? "var(--text-dark)" : "var(--text-muted)",
+            borderBottom: activeTab === "expenses" ? "3px solid var(--accent-gold)" : "none",
+            cursor: "pointer"
+          }}
+        >
+          Route Expenses
+        </button>
+      </div>
+
+      {!canRead ? (
+        <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)", background: "var(--bg-surface)", borderRadius: "10px" }}>
+          🔐 Expense lists are restricted to Financial Analysts and Fleet Managers. Log forms are accessible above.
+        </div>
+      ) : loading ? (
+        <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>Loading ledger sheets...</div>
+      ) : activeTab === "fuel" ? (
+        <section className="fleet-registry">
+          <div className="fleet-table-wrap">
+            <table className="fleet-table">
+              <thead>
+                <tr>
+                  <th>Vehicle</th>
+                  <th>Trip ID</th>
+                  <th>Date</th>
+                  <th>Liters</th>
+                  <th>Odometer At Fill</th>
+                  <th>Total Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fuelLogs.map((log) => (
+                  <tr key={log._id}>
+                    <td>
+                      <div className="fleet-vehicle-name">
+                        <span><Fuel size={15} /></span>
+                        <strong>{log.vehicle?.name || "Deleted Vehicle"}</strong>
+                        <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginLeft: "4px" }}>
+                          ({log.vehicle?.registrationNumber || "—"})
+                        </span>
+                      </div>
+                    </td>
+                    <td>{log.trip ? log.trip.slice(-6).toUpperCase() : "Standalone"}</td>
+                    <td>{new Date(log.date).toLocaleDateString()}</td>
+                    <td>{log.liters} L</td>
+                    <td>{log.odometerAtFillup ? `${log.odometerAtFillup.toLocaleString()} km` : "—"}</td>
+                    <td><strong>₹{log.cost?.toLocaleString()}</strong></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {!fuelLogs.length && (
+            <div className="fleet-empty">
+              <Fuel size={22} />
+              <strong>No fuel logs registered</strong>
+              <span>Refill telemetry has not been recorded yet.</span>
+            </div>
+          )}
+        </section>
+      ) : (
+        <section className="fleet-registry">
+          <div className="fleet-table-wrap">
+            <table className="fleet-table">
+              <thead>
+                <tr>
+                  <th>Vehicle</th>
+                  <th>Trip ID</th>
+                  <th>Date</th>
+                  <th>Category</th>
+                  <th>Notes</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {expenses.map((exp) => (
+                  <tr key={exp._id}>
+                    <td>
+                      <div className="fleet-vehicle-name">
+                        <span><DollarSign size={15} /></span>
+                        <strong>{exp.vehicle?.name || "Deleted Vehicle"}</strong>
+                        <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginLeft: "4px" }}>
+                          ({exp.vehicle?.registrationNumber || "—"})
+                        </span>
+                      </div>
+                    </td>
+                    <td>{exp.trip ? exp.trip.slice(-6).toUpperCase() : "Standalone"}</td>
+                    <td>{new Date(exp.date).toLocaleDateString()}</td>
+                    <td>
+                      <span style={{ fontWeight: "700" }}>{exp.type}</span>
+                    </td>
+                    <td>{exp.notes || "—"}</td>
+                    <td><strong>₹{exp.amount?.toLocaleString()}</strong></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {!expenses.length && (
+            <div className="fleet-empty">
+              <DollarSign size={22} />
+              <strong>No route expenses recorded</strong>
+              <span>Tolls, parking, and fines logs are empty.</span>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Log Fuel Modal */}
+      {showFuelModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, width: "100%", height: "100%", 
+          background: "rgba(15, 23, 42, 0.6)", display: "flex", justifyContent: "center", 
+          alignItems: "center", zIndex: 1000, backdropFilter: "blur(4px)"
+        }}>
+          <div className="loadswift-card" style={{ width: "100%", maxWidth: "500px", padding: "28px", display: "flex", flexDirection: "column", gap: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h2 style={{ fontSize: "1.4rem", fontWeight: "800" }}>Log Fuel Refill</h2>
+              <button onClick={() => setShowFuelModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>
+                <X size={20} />
+              </button>
+            </div>
+            
+            {fuelError && <p style={{ color: "var(--text-retired)", fontSize: "0.85rem", fontWeight: "600" }}>❌ {fuelError}</p>}
+            
+            <form onSubmit={handleLogFuel} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", marginBottom: "6px" }}>SELECT VEHICLE *</label>
+                <select 
+                  className="loadswift-input" style={{ width: "100%" }} required
+                  value={fuelForm.vehicleId} onChange={e => setFuelForm({...fuelForm, vehicleId: e.target.value})}
+                >
+                  <option value="">-- Choose Vehicle --</option>
+                  {vehicles.map(v => (
+                    <option key={v._id} value={v._id}>{v.name} ({v.registrationNumber})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", marginBottom: "6px" }}>ASSOCIATED ACTIVE TRIP (OPTIONAL)</label>
+                <select 
+                  className="loadswift-input" style={{ width: "100%" }}
+                  value={fuelForm.tripId} onChange={e => setFuelForm({...fuelForm, tripId: e.target.value})}
+                >
+                  <option value="">Standalone / Unassigned</option>
+                  {trips.filter(t => t.vehicle?._id === fuelForm.vehicleId).map(t => (
+                    <option key={t._id} value={t._id}>{t.source} to {t.destination} ({t._id.slice(-6).toUpperCase()})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", marginBottom: "6px" }}>LITERS REFILLED *</label>
+                  <input 
+                    type="number" step="0.01" min="0.01" placeholder="e.g. 45" className="loadswift-input" required 
+                    value={fuelForm.liters} onChange={e => setFuelForm({...fuelForm, liters: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", marginBottom: "6px" }}>TOTAL COST (INR) *</label>
+                  <input 
+                    type="number" min="0" placeholder="e.g. 3500" className="loadswift-input" required 
+                    value={fuelForm.cost} onChange={e => setFuelForm({...fuelForm, cost: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", marginBottom: "6px" }}>ODOMETER AT FILLUP (KM)</label>
+                <input 
+                  type="number" min="0" placeholder="e.g. 74500" className="loadswift-input" 
+                  value={fuelForm.odometerAtFillup} onChange={e => setFuelForm({...fuelForm, odometerAtFillup: e.target.value})}
+                />
+              </div>
+
+              <button 
+                type="submit" disabled={fuelSaving}
+                style={{ 
+                  background: 'var(--text-dark)', color: '#fff', border: 'none', padding: '14px', 
+                  borderRadius: '8px', cursor: fuelSaving ? 'not-allowed' : 'pointer', fontWeight: '700', 
+                  fontSize: '0.95rem', marginTop: "10px" 
+                }}
+              >
+                {fuelSaving ? "Logging Refill..." : "Log Fuel refill"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Log Expense Modal */}
+      {showExpenseModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, width: "100%", height: "100%", 
+          background: "rgba(15, 23, 42, 0.6)", display: "flex", justifyContent: "center", 
+          alignItems: "center", zIndex: 1000, backdropFilter: "blur(4px)"
+        }}>
+          <div className="loadswift-card" style={{ width: "100%", maxWidth: "500px", padding: "28px", display: "flex", flexDirection: "column", gap: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h2 style={{ fontSize: "1.4rem", fontWeight: "800" }}>Log Route Expense</h2>
+              <button onClick={() => setShowExpenseModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>
+                <X size={20} />
+              </button>
+            </div>
+            
+            {expenseError && <p style={{ color: "var(--text-retired)", fontSize: "0.85rem", fontWeight: "600" }}>❌ {expenseError}</p>}
+            
+            <form onSubmit={handleLogExpense} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", marginBottom: "6px" }}>SELECT VEHICLE *</label>
+                <select 
+                  className="loadswift-input" style={{ width: "100%" }} required
+                  value={expenseForm.vehicleId} onChange={e => setExpenseForm({...expenseForm, vehicleId: e.target.value})}
+                >
+                  <option value="">-- Choose Vehicle --</option>
+                  {vehicles.map(v => (
+                    <option key={v._id} value={v._id}>{v.name} ({v.registrationNumber})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", marginBottom: "6px" }}>EXPENSE CATEGORY *</label>
+                  <select 
+                    className="loadswift-input" style={{ width: "100%" }} required
+                    value={expenseForm.type} onChange={e => setExpenseForm({...expenseForm, type: e.target.value})}
+                  >
+                    <option value="Toll">Toll</option>
+                    <option value="Parking">Parking</option>
+                    <option value="Fine">Fine</option>
+                    <option value="Permit">Permit</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", marginBottom: "6px" }}>AMOUNT (INR) *</label>
+                  <input 
+                    type="number" min="0" placeholder="e.g. 350" className="loadswift-input" required 
+                    value={expenseForm.amount} onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", marginBottom: "6px" }}>ASSOCIATED ACTIVE TRIP (OPTIONAL)</label>
+                <select 
+                  className="loadswift-input" style={{ width: "100%" }}
+                  value={expenseForm.tripId} onChange={e => setExpenseForm({...expenseForm, tripId: e.target.value})}
+                >
+                  <option value="">Standalone / Unassigned</option>
+                  {trips.filter(t => t.vehicle?._id === expenseForm.vehicleId).map(t => (
+                    <option key={t._id} value={t._id}>{t.source} to {t.destination} ({t._id.slice(-6).toUpperCase()})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", marginBottom: "6px" }}>NOTES / DESCRIPTION</label>
+                <input 
+                  type="text" placeholder="e.g. Pune expressway toll gate 3" className="loadswift-input" 
+                  value={expenseForm.notes} onChange={e => setExpenseForm({...expenseForm, notes: e.target.value})}
+                />
+              </div>
+
+              <button 
+                type="submit" disabled={expenseSaving}
+                style={{ 
+                  background: 'var(--text-dark)', color: '#fff', border: 'none', padding: '14px', 
+                  borderRadius: '8px', cursor: expenseSaving ? 'not-allowed' : 'pointer', fontWeight: '700', 
+                  fontSize: '0.95rem', marginTop: "10px" 
+                }}
+              >
+                {expenseSaving ? "Recording Expense..." : "Log Route Expense"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
-
-function EmptyState() { return <div className="expenses-empty"><ReceiptText size={22} /><strong>No matching expenses found</strong><span>Try changing your search.</span></div>; }

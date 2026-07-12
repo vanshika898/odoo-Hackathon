@@ -1,95 +1,71 @@
 const jwt = require("jsonwebtoken");
-const User = require("../models/UserModel");
 require("dotenv").config();
 
-
-//auth
-const auth = async (req, res, next) => {
+// Authentication middleware: validates the JWT token
+const authenticate = async (req, res, next) => {
   try {
-    const token = req.cookies.token || req.header("Authorization").replace("Bearer ", "") || req.body.token;
-    if(!token){
-        return res.status(401).json({
-            success:false,
-            message:"Token is missing"
-        })
+    // Check for token in cookies, Authorization header, or body
+    const token =
+      req.cookies?.token ||
+      (req.header("Authorization") && req.header("Authorization").replace("Bearer ", "")) ||
+      req.body?.token;
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication token is missing. Please log in.",
+      });
     }
 
-    //verify token
-     try{
-    const verifyToken = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("verifyToken", verifyToken);
-    req.user = verifyToken;
-    next();
-     }catch(error){
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded; // Contains id, email, accountType
+      next();
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired authentication token.",
+      });
+    }
+  } catch (error) {
+    console.error("Auth middleware error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred during authentication verification.",
+    });
+  }
+};
+
+// Authorization middleware: checks if the user's role is allowed
+const authorize = (...allowedRoles) => {
+  return (req, res, next) => {
+    try {
+      if (!req.user) {
         return res.status(401).json({
-            success:false,
-            message:"Invalid token"
-        })
-     } 
+          success: false,
+          message: "User is not authenticated.",
+        });
+      }
 
-  }catch(error){
-    return res.status(401).json({
-      success:false,
-      message:"Something went wrong while verifying the token",
-    })
-  }
-  }
+      // Check both "role" and "accountType" for safety
+      const userRole = req.user.accountType || req.user.role;
 
+      if (!userRole || !allowedRoles.includes(userRole)) {
+        return res.status(403).json({
+          success: false,
+          message: `Access denied. Role '${userRole || "unknown"}' is not authorized to access this resource.`,
+        });
+      }
 
-  // isStudent
-  // exports.isStudent = async(req,res,next)=>{
-  //   try{
-  //       const {accountType} = req.user;
-  //       if(accountType !== "Student"){
-  //           return res.status(401).json({
-  //               success:false,
-  //               message:"This is a protected route for students only"
-  //           })
-  //       }
-  //       next();
+      next();
+    } catch (error) {
+      console.error("Authorization middleware error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "An error occurred during role validation.",
+      });
+    }
+  };
+};
 
-  //   }catch(error){
-  //       return res.status(401).json({
-  //           success:false,
-  //           message:"User is not authorized to access this route",
-  //       })
-  //   }
-  // }
-
-
-  // isInstructor
-
-//   exports.isInstructor = async(req,res,next)=>{
-//     try{
-//         const {accountType} = req.user;
-//         if(accountType !== "Instructor"){
-//             return res.status(401).json({
-//                 success:false,
-//                 message:"This is a protected route for instructors only"
-//             })
-//         }
-//         next();
-
-//     }catch(error){
-//         return res.status(401).json({
-//             success:false,
-//             message:"User is not authorized to access this route",
-//         })
-//     }
-//   }
-
-// exports.isAdmin = async(req,res,next)=>{
-// try{
-// const {accountType} = req.user;
-// if(accountType !== "Admin"){
-//     return res.status(401).json({
-//         success:false,
-//         message:"This is a protected route for Admins only"
-//     })
-// }
-// }catch(error){
-// return res.status(401).json({
-//     success:false,
-//     message:"User is not authorized to access this route",
-// })
-// }}
+module.exports = { authenticate, authorize };

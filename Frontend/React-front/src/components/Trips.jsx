@@ -1,71 +1,496 @@
-import React, { useMemo, useState } from "react";
-import { CircleCheck, Filter, MapPin, Plus, Search, SlidersHorizontal, Truck, X } from "lucide-react";
-import { mockRecentTrips } from "../mockData";
+import React, { useEffect, useMemo, useState } from "react";
+import { ChevronDown, Filter, MoreHorizontal, Plus, Search, Route, X, Play, CheckCircle2, Ban } from "lucide-react";
+import { api } from "../api";
 
-const tripMeta = {
-  TR001: { origin: "Gandhinagar Depot", destination: "Ahmedabad Hub", progress: 66 },
-  TR002: { origin: "Surat Terminal", destination: "Vadodara Warehouse", progress: 100 },
-  TR003: { origin: "Rajkot Distribution", destination: "Ahmedabad Hub", progress: 28 },
-  TR004: { origin: "Origin pending", destination: "Destination pending", progress: 0 },
+const statusStyle = {
+  "On Trip": "is-on-trip", // maps to "Dispatched" in styling classes
+  Completed: "is-completed",
+  Dispatched: "is-dispatched",
+  Draft: "is-draft",
+  Cancelled: "is-cancelled"
 };
 
-const statusClass = { "On Trip": "trip-on-route", Completed: "trip-completed", Dispatched: "trip-dispatched", Draft: "trip-draft" };
-
-export default function Trips() {
-  const [cargoWeight, setCargoWeight] = useState("");
-  const [selectedVehicle, setSelectedVehicle] = useState("VAN-05");
-  const [validationError, setValidationError] = useState("");
+export default function Trips({ user }) {
+  const [tripsList, setTripsList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState("All loads");
+  const [statusFilter, setStatusFilter] = useState("All statuses");
 
-  const handleWeightChange = (event) => {
-    const value = event.target.value;
-    const weight = Number.parseFloat(value);
-    const limit = selectedVehicle === "VAN-05" ? 500 : 5000;
-    setCargoWeight(value);
-    setValidationError(Number.isFinite(weight) && weight > limit ? `Cargo weight exceeds the ${limit.toLocaleString()} kg limit for ${selectedVehicle}. Choose another vehicle or reduce the load.` : "");
+  // Selection states for modal
+  const [availableVehicles, setAvailableVehicles] = useState([]);
+  const [availableDrivers, setAvailableDrivers] = useState([]);
+
+  // Create Modal
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newTrip, setNewTrip] = useState({
+    source: "",
+    destination: "",
+    vehicleId: "",
+    driverId: "",
+    cargoWeight: "",
+    plannedDistance: ""
+  });
+  const [createError, setCreateError] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  // Complete Modal
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [selectedTripId, setSelectedTripId] = useState(null);
+  const [completionData, setCompletionData] = useState({
+    finalOdometer: "",
+    fuelConsumed: "",
+    actualDistance: "",
+    revenue: ""
+  });
+  const [completeError, setCompleteError] = useState("");
+  const [completing, setCompleting] = useState(false);
+
+  // Role permissions
+  const isFleetManager = user?.accountType === "FleetManager";
+  const isDriver = user?.accountType === "Driver";
+  const isDispatcher = user?.accountType === "Dispatcher";
+  const isAdmin = user?.accountType === "Admin";
+
+  const canCreateDispatchComplete = isFleetManager || isDriver || isDispatcher || isAdmin;
+  const canCancel = isFleetManager || isAdmin;
+
+  const fetchTrips = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get("/trips");
+      if (res.success && res.trips) {
+        setTripsList(res.trips);
+      }
+    } catch (error) {
+      console.error("Failed to fetch trips:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const visibleTrips = useMemo(() => mockRecentTrips.filter((trip) => {
-    const matchesQuery = `${trip.id} ${trip.vehicle} ${trip.driver}`.toLowerCase().includes(query.toLowerCase());
-    const matchesFilter = activeFilter === "All loads" || (activeFilter === "In transit" && trip.status === "On Trip") || (activeFilter === "Completed" && trip.status === "Completed");
-    return matchesQuery && matchesFilter;
-  }), [activeFilter, query]);
+  const loadModalData = async () => {
+    try {
+      // Fetch available vehicles
+      const vRes = await api.get("/vehicles?status=Available");
+      if (vRes.success && vRes.vehicles) {
+        setAvailableVehicles(vRes.vehicles);
+      }
 
-  return <div className="trips-page">
-    <header className="trips-header">
-      <div><span className="trips-eyebrow">Dispatch centre</span><h1>Tracking loads</h1><p>Monitor active routes and create a new fleet dispatch.</p></div>
-      <button className="trips-primary-action" type="button"><Plus size={17} /> Add load</button>
-    </header>
+      // Fetch available drivers
+      const dRes = await api.get("/drivers?status=Available");
+      if (dRes.success && dRes.drivers) {
+        // filter out expired licenses if any client-side just in case
+        const eligible = dRes.drivers.filter(d => new Date(d.licenseExpiryDate) > new Date());
+        setAvailableDrivers(eligible);
+      }
+    } catch (error) {
+      console.error("Failed to load options for dispatch selection:", error);
+    }
+  };
 
-    <div className="trips-layout">
-      <section className="trips-loads-panel">
-        <div className="trips-search-row"><div className="trips-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search trip, vehicle or driver" />{query && <button aria-label="Clear search" type="button" onClick={() => setQuery("")}><X size={15} /></button>}</div><button className="trips-filter-button" type="button"><SlidersHorizontal size={16} /> Filters</button></div>
-        <div className="trips-filter-tabs">{["All loads", "In transit", "Completed"].map((filter) => <button key={filter} className={activeFilter === filter ? "is-selected" : ""} type="button" onClick={() => setActiveFilter(filter)}>{filter}<span>{filter === "All loads" ? mockRecentTrips.length : filter === "In transit" ? 1 : 1}</span></button>)}</div>
-        <div className="trips-load-list">
-          {visibleTrips.length ? visibleTrips.map((trip) => {
-            const meta = tripMeta[trip.id];
-            return <article className="trip-load-card" key={trip.id}>
-              <div className="trip-load-topline"><div className="trip-load-id"><span><Truck size={15} /></span><strong>#{trip.id}</strong></div><span className={`trip-status ${statusClass[trip.status]}`}>{trip.status === "Completed" && <CircleCheck size={13} />}{trip.status}</span></div>
-              <div className="trip-route"><div><i className="trip-route-start" /><span>{meta.origin}</span></div><div className="trip-route-line"><b style={{ width: `${meta.progress}%` }} /></div><Truck className="trip-route-truck" size={15} /><div><i className="trip-route-end" /><span>{meta.destination}</span></div></div>
-              <footer><span><MapPin size={14} /> {trip.vehicle}</span><span>{trip.driver}</span><strong>{trip.eta}</strong></footer>
-            </article>;
-          }) : <div className="trips-empty"><Filter size={20} /><strong>No loads found</strong><span>Try changing your search or filter.</span></div>}
+  useEffect(() => {
+    fetchTrips();
+  }, []);
+
+  const handleOpenCreateModal = () => {
+    setCreateError("");
+    loadModalData();
+    setShowCreateModal(true);
+  };
+
+  const trips = useMemo(() => {
+    return tripsList.filter((trip) => {
+      // If user is a Driver, only show their assigned trips
+      if (isDriver) {
+        const isAssigned = trip.driver?._id === user.driverProfile || 
+                           trip.driver?.userAccount === user._id ||
+                           trip.driver?.name?.toLowerCase() === user.fullName?.toLowerCase();
+        if (!isAssigned) return false;
+      }
+
+      const searchStr = `${trip.source} ${trip.destination} ${trip.vehicle?.name || ""} ${trip.driver?.name || ""}`.toLowerCase();
+      const matchesQuery = searchStr.includes(query.toLowerCase());
+      const matchesStatus = statusFilter === "All statuses" || trip.status === statusFilter;
+      return matchesQuery && matchesStatus;
+    });
+  }, [tripsList, query, statusFilter, isDriver, user]);
+
+  const handleCreateTrip = async (e) => {
+    e.preventDefault();
+    setCreateError("");
+    setCreating(true);
+
+    try {
+      const payload = {
+        ...newTrip,
+        cargoWeight: Number(newTrip.cargoWeight),
+        plannedDistance: Number(newTrip.plannedDistance)
+      };
+
+      const res = await api.post("/trips", payload);
+      if (res.success) {
+        setShowCreateModal(false);
+        setNewTrip({
+          source: "",
+          destination: "",
+          vehicleId: "",
+          driverId: "",
+          cargoWeight: "",
+          plannedDistance: ""
+        });
+        fetchTrips();
+      }
+    } catch (error) {
+      setCreateError(error.message || "Failed to create trip Draft");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDispatch = async (id) => {
+    if (!window.confirm("Confirm dispatching this trip load?")) return;
+    try {
+      const res = await api.patch(`/trips/${id}/dispatch`);
+      if (res.success) {
+        alert("Trip dispatched successfully! Vehicle and driver set to On Trip.");
+        fetchTrips();
+      }
+    } catch (error) {
+      alert(error.message || "Failed to dispatch trip");
+    }
+  };
+
+  const handleOpenCompleteModal = (id) => {
+    setCompleteError("");
+    setSelectedTripId(id);
+    setCompletionData({
+      finalOdometer: "",
+      fuelConsumed: "",
+      actualDistance: "",
+      revenue: ""
+    });
+    setShowCompleteModal(true);
+  };
+
+  const handleCompleteTrip = async (e) => {
+    e.preventDefault();
+    setCompleteError("");
+    setCompleting(true);
+
+    try {
+      const payload = {
+        finalOdometer: Number(completionData.finalOdometer),
+        actualDistance: completionData.actualDistance ? Number(completionData.actualDistance) : undefined,
+        fuelConsumed: completionData.fuelConsumed ? Number(completionData.fuelConsumed) : undefined,
+        revenue: completionData.revenue ? Number(completionData.revenue) : 0
+      };
+
+      const res = await api.patch(`/trips/${selectedTripId}/complete`, payload);
+      if (res.success) {
+        setShowCompleteModal(false);
+        fetchTrips();
+      }
+    } catch (error) {
+      setCompleteError(error.message || "Failed to complete trip");
+    } finally {
+      setCompleting(false);
+    }
+  };
+
+  const handleCancel = async (id) => {
+    if (!window.confirm("Are you sure you want to cancel this trip?")) return;
+    try {
+      const res = await api.patch(`/trips/${id}/cancel`);
+      if (res.success) {
+        alert("Trip cancelled successfully.");
+        fetchTrips();
+      }
+    } catch (error) {
+      alert(error.message || "Failed to cancel trip");
+    }
+  };
+
+  return (
+    <div className="trips-page">
+      <header className="fleet-header">
+        <div>
+          <span className="fleet-eyebrow">Logistics tracking</span>
+          <h1>Trips & Routes</h1>
+          <p>
+            {isDriver 
+              ? `Showing your assigned trips.` 
+              : `Total of ${trips.length} operations monitored.`}
+          </p>
         </div>
+        <div className="fleet-header-actions">
+          {canCreateDispatchComplete && (
+            <button className="fleet-add-button" type="button" onClick={handleOpenCreateModal}>
+              <Plus size={17} /> Create trip
+            </button>
+          )}
+        </div>
+      </header>
+
+      <section className="fleet-registry">
+        <div className="fleet-toolbar">
+          <div className="fleet-search">
+            <Search size={17} />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search source, destination, asset or operator" />
+          </div>
+          <div className="fleet-select-wrap">
+            <Filter size={15} />
+            <select aria-label="Filter by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              <option>All statuses</option>
+              <option>Draft</option>
+              <option>Dispatched</option>
+              <option>Completed</option>
+              <option>Cancelled</option>
+            </select>
+            <ChevronDown size={14} />
+          </div>
+        </div>
+
+        {loading ? (
+          <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>Loading trip sheets...</div>
+        ) : (
+          <div className="fleet-table-wrap">
+            <table className="fleet-table">
+              <thead>
+                <tr>
+                  <th>Trip ID</th>
+                  <th>Route</th>
+                  <th>Vehicle</th>
+                  <th>Driver</th>
+                  <th>Cargo Weight</th>
+                  <th>Planned Distance</th>
+                  <th>Revenue</th>
+                  <th>Status</th>
+                  {canCreateDispatchComplete && <th aria-label="Actions" />}
+                </tr>
+              </thead>
+              <tbody>
+                {trips.map((trip) => (
+                  <tr key={trip._id}>
+                    <td>
+                      <span className="dashboard-trip-id">
+                        <Route size={15} />
+                        {trip._id.slice(-6).toUpperCase()}
+                      </span>
+                    </td>
+                    <td>
+                      <strong>{trip.source}</strong> to <strong>{trip.destination}</strong>
+                    </td>
+                    <td>{trip.vehicle ? `${trip.vehicle.name} (${trip.vehicle.registrationNumber})` : "—"}</td>
+                    <td>{trip.driver ? trip.driver.name : "—"}</td>
+                    <td>{trip.cargoWeight?.toLocaleString()} kg</td>
+                    <td>{trip.plannedDistance} km</td>
+                    <td>{trip.revenue ? `₹${trip.revenue.toLocaleString()}` : "—"}</td>
+                    <td>
+                      <span className={`fleet-status ${statusStyle[trip.status] || "fleet-available"}`}>{trip.status}</span>
+                    </td>
+                    {canCreateDispatchComplete && (
+                      <td>
+                        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                          {trip.status === "Draft" && (
+                            <button 
+                              type="button" title="Dispatch Load" onClick={() => handleDispatch(trip._id)}
+                              style={{ color: "#2563eb", cursor: "pointer", border: "none", background: "none", fontWeight: "700" }}
+                            >
+                              Dispatch
+                            </button>
+                          )}
+                          {trip.status === "Dispatched" && (
+                            <button 
+                              type="button" title="Complete Trip" onClick={() => handleOpenCompleteModal(trip._id)}
+                              style={{ color: "#16a34a", cursor: "pointer", border: "none", background: "none", fontWeight: "700" }}
+                            >
+                              Complete
+                            </button>
+                          )}
+                          {canCancel && (trip.status === "Draft" || trip.status === "Dispatched") && (
+                            <button 
+                              type="button" title="Cancel Trip" onClick={() => handleCancel(trip._id)}
+                              style={{ color: "var(--text-retired)", cursor: "pointer", border: "none", background: "none", fontWeight: "700" }}
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {!loading && !trips.length && (
+          <div className="fleet-empty">
+            <Route size={22} />
+            <strong>No trips found</strong>
+            <span>Try adjusting your filters or create a new trip record.</span>
+          </div>
+        )}
       </section>
 
-      <aside className="trips-create-panel">
-        <div className="trips-create-heading"><div className="trips-heading-icon"><Truck size={18} /></div><div><h2>New dispatch</h2><p>Create a route in a few details.</p></div></div>
-        <form className="trips-form" onSubmit={(event) => event.preventDefault()}>
-          <label>Origin depot<input className="loadswift-input" type="text" placeholder="e.g. Gandhinagar Depot" /></label>
-          <label>Delivery destination<input className="loadswift-input" type="text" placeholder="e.g. Ahmedabad Hub" /></label>
-          <label>Vehicle<select className="loadswift-input" value={selectedVehicle} onChange={(event) => { setSelectedVehicle(event.target.value); setCargoWeight(""); setValidationError(""); }}><option value="VAN-05">VAN-05 · capacity 500 kg</option><option value="TRUCK-11">TRUCK-11 · capacity 5,000 kg</option></select></label>
-          <label>Cargo weight <span>(kg)</span><input className={`loadswift-input ${validationError ? "is-invalid" : ""}`} type="number" min="0" value={cargoWeight} onChange={handleWeightChange} placeholder="Enter cargo weight" /></label>
-          {validationError && <div className="trips-validation-error">{validationError}</div>}
-          <button className="trips-create-submit" type="submit" disabled={Boolean(validationError)}><Plus size={17} /> Create dispatch</button>
-        </form>
-        <div className="trips-form-note">Vehicle capacity is checked automatically before your dispatch is created.</div>
-      </aside>
+      {/* Create Trip Modal */}
+      {showCreateModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, width: "100%", height: "100%", 
+          background: "rgba(15, 23, 42, 0.6)", display: "flex", justifyContent: "center", 
+          alignItems: "center", zIndex: 1000, backdropFilter: "blur(4px)"
+        }}>
+          <div className="loadswift-card" style={{ width: "100%", maxWidth: "500px", padding: "28px", display: "flex", flexDirection: "column", gap: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h2 style={{ fontSize: "1.4rem", fontWeight: "800" }}>Draft New Trip</h2>
+              <button onClick={() => setShowCreateModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>
+                <X size={20} />
+              </button>
+            </div>
+            
+            {createError && <p style={{ color: "var(--text-retired)", fontSize: "0.85rem", fontWeight: "600" }}>❌ {createError}</p>}
+            
+            <form onSubmit={handleCreateTrip} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", marginBottom: "6px" }}>SOURCE HUB *</label>
+                  <input 
+                    type="text" placeholder="e.g. Ahmedabad, GJ" className="loadswift-input" required 
+                    value={newTrip.source} onChange={e => setNewTrip({...newTrip, source: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", marginBottom: "6px" }}>DESTINATION HUB *</label>
+                  <input 
+                    type="text" placeholder="e.g. Pune, MH" className="loadswift-input" required 
+                    value={newTrip.destination} onChange={e => setNewTrip({...newTrip, destination: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", marginBottom: "6px" }}>SELECT VEHICLE (AVAILABLE ONLY) *</label>
+                <select 
+                  className="loadswift-input" style={{ width: "100%" }} required
+                  value={newTrip.vehicleId} onChange={e => setNewTrip({...newTrip, vehicleId: e.target.value})}
+                >
+                  <option value="">-- Choose Vehicle --</option>
+                  {availableVehicles.map(v => (
+                    <option key={v._id} value={v._id}>{v.name} ({v.registrationNumber}) - Cap: {v.maxLoadCapacity}kg</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", marginBottom: "6px" }}>SELECT DRIVER (AVAILABLE ONLY) *</label>
+                <select 
+                  className="loadswift-input" style={{ width: "100%" }} required
+                  value={newTrip.driverId} onChange={e => setNewTrip({...newTrip, driverId: e.target.value})}
+                >
+                  <option value="">-- Choose Driver --</option>
+                  {availableDrivers.map(d => (
+                    <option key={d._id} value={d._id}>{d.name} (License: {d.licenseNumber}) - Score: {d.safetyScore}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", marginBottom: "6px" }}>CARGO WEIGHT (KG) *</label>
+                  <input 
+                    type="number" min="0" placeholder="e.g. 1500" className="loadswift-input" required 
+                    value={newTrip.cargoWeight} onChange={e => setNewTrip({...newTrip, cargoWeight: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", marginBottom: "6px" }}>PLANNED DISTANCE (KM) *</label>
+                  <input 
+                    type="number" min="1" placeholder="e.g. 650" className="loadswift-input" required 
+                    value={newTrip.plannedDistance} onChange={e => setNewTrip({...newTrip, plannedDistance: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <button 
+                type="submit" disabled={creating}
+                style={{ 
+                  background: 'var(--text-dark)', color: '#fff', border: 'none', padding: '14px', 
+                  borderRadius: '8px', cursor: creating ? 'not-allowed' : 'pointer', fontWeight: '700', 
+                  fontSize: '0.95rem', marginTop: "10px" 
+                }}
+              >
+                {creating ? "Saving Draft..." : "Save Draft"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Complete Trip Modal */}
+      {showCompleteModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, width: "100%", height: "100%", 
+          background: "rgba(15, 23, 42, 0.6)", display: "flex", justifyContent: "center", 
+          alignItems: "center", zIndex: 1000, backdropFilter: "blur(4px)"
+        }}>
+          <div className="loadswift-card" style={{ width: "100%", maxWidth: "500px", padding: "28px", display: "flex", flexDirection: "column", gap: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h2 style={{ fontSize: "1.4rem", fontWeight: "800" }}>Log Trip Completion</h2>
+              <button onClick={() => setShowCompleteModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>
+                <X size={20} />
+              </button>
+            </div>
+            
+            {completeError && <p style={{ color: "var(--text-retired)", fontSize: "0.85rem", fontWeight: "600" }}>❌ {completeError}</p>}
+            
+            <form onSubmit={handleCompleteTrip} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", marginBottom: "6px" }}>FINAL ODOMETER VALUE (KM) *</label>
+                <input 
+                  type="number" min="0" placeholder="e.g. 76000" className="loadswift-input" required 
+                  value={completionData.finalOdometer} onChange={e => setCompletionData({...completionData, finalOdometer: e.target.value})}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", marginBottom: "6px" }}>ACTUAL DISTANCE (KM)</label>
+                  <input 
+                    type="number" min="1" placeholder="e.g. 660" className="loadswift-input" 
+                    value={completionData.actualDistance} onChange={e => setCompletionData({...completionData, actualDistance: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", marginBottom: "6px" }}>FUEL CONSUMED (LITERS)</label>
+                  <input 
+                    type="number" min="1" placeholder="e.g. 80" className="loadswift-input" 
+                    value={completionData.fuelConsumed} onChange={e => setCompletionData({...completionData, fuelConsumed: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: "700", marginBottom: "6px" }}>TRIP REVENUE (INR) *</label>
+                <input 
+                  type="number" min="0" placeholder="e.g. 25000" className="loadswift-input" required 
+                  value={completionData.revenue} onChange={e => setCompletionData({...completionData, revenue: e.target.value})}
+                />
+              </div>
+
+              <button 
+                type="submit" disabled={completing}
+                style={{ 
+                  background: 'var(--text-dark)', color: '#fff', border: 'none', padding: '14px', 
+                  borderRadius: '8px', cursor: completing ? 'not-allowed' : 'pointer', fontWeight: '700', 
+                  fontSize: '0.95rem', marginTop: "10px" 
+                }}
+              >
+                {completing ? "Recording Trip Sheet..." : "Log Completion"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
-  </div>;
+  );
 }
