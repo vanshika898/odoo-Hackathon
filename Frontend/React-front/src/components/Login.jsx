@@ -6,7 +6,7 @@ export default function Login({ onLoginSuccess }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (creds.email === 'Raven.k@transitops.in' && creds.password === '123456') {
+    if (creds.email === 'tishajain603@gmail.com' && creds.password === '123456') {
       onLoginSuccess();
     } else {
       setError(true);
