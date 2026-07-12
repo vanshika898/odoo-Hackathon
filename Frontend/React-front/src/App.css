@@ -1,4 +1,4 @@
-.counter {
+/* .counter {
   font-size: 16px;
   padding: 5px 10px;
   border-radius: 5px;
@@ -181,4 +181,78 @@
     right: 0;
     border-right-color: var(--border);
   }
+} */
+
+
+:root {
+  /* LoadSwift Color Palette */
+  --bg-surface: #f8f9fb;
+  --bg-sidebar: #1a1a1a;
+  --sidebar-active: #333;
+  --text-dark: #1a1a1a;
+  --text-muted: #92929d;
+  --text-available: #10b981;
+  --text-ontrip: #f59e0b;
+  --text-maintenance: #ef4444;
+  --text-retired: #64748b;
+  --accent-gold: #ffcc00;
+  --border-muted: #e5e7eb;
+  --badge-available: #d1fae5;
+  --badge-ontrip: #fef3c7;
+  --badge-maintenance: #fee2e2;
+  --badge-suspended: #f3f4f6;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, sans-serif;
+  background-color: var(--bg-surface);
+  color: var(--text-dark);
+}
+
+/* LoadSwift Reusable Card */
+.loadswift-card {
+  background: #ffffff;
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid var(--border-muted);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* LoadSwift Table Styles */
+.loadswift-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+.loadswift-table th {
+  text-align: left;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding: 12px;
+  text-transform: uppercase;
+}
+.loadswift-table td {
+  padding: 16px 12px;
+  border-top: 1px solid var(--border-muted);
+  font-size: 0.9rem;
+}
+
+/* Status Badges */
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* Inputs */
+.loadswift-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border-muted);
+  border-radius: 8px;
+  box-sizing: border-box;
+  font-size: 0.95rem;
 }
