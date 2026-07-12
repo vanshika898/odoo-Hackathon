@@ -1,56 +1,37 @@
-import React from 'react';
-import { mockDrivers } from '../mockData';
+import React, { useMemo, useState } from "react";
+import { AlertTriangle, ChevronDown, Eye, Filter, MoreHorizontal, Phone, Plus, Search, ShieldCheck, UserRound } from "lucide-react";
+import { mockDrivers } from "../mockData";
+
+const statusClass = { Available: "driver-available", "On Trip": "driver-on-trip", Suspended: "driver-suspended", "Off Duty": "driver-off-duty" };
+
+function initials(name) { return name.split(" ").map((part) => part[0]).join("").slice(0, 2); }
 
 export default function Drivers() {
-  return (
-    <div className="loadswift-card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <h3 style={{ fontWeight: '700' }}>Personnel & License Safety Engine</h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '2px' }}>Validating active regulatory certifications.</p>
-        </div>
-        <button style={{ background: 'var(--text-dark)', border: 'none', padding: '12px 24px', color: '#fff', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>+ Add Operator</button>
-      </div>
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("All drivers");
+  const drivers = useMemo(() => mockDrivers.filter((driver) => (`${driver.name} ${driver.license} ${driver.category}`).toLowerCase().includes(query.toLowerCase()) && (status === "All drivers" || driver.status === status)), [query, status]);
 
-      <table className="loadswift-table">
-        <thead>
-          <tr>
-            <th>OPERATOR NAME</th>
-            <th>LICENSE IDENTIFIER</th>
-            <th>EXPIRY DATE</th>
-            <th>SAFETY INDEX</th>
-            <th>OPERATIONAL STATUS</th>
-          </tr>
-        </thead>
-        <tbody>
-          {mockDrivers.map(d => (
-            <tr key={d.id}>
-              <td style={{ fontWeight: '600' }}>{d.name}</td>
-              <td>{d.license}</td>
-              <td style={{ color: d.expiry.includes('EXPIRED') ? 'var(--text-retired)' : 'inherit', fontWeight: d.expiry.includes('EXPIRED') ? '600' : 'normal' }}>{d.expiry}</td>
-              <td>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ background: '#e6e8ec', width: '60px', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
-                    <div style={{ background: d.safety > 90 ? 'var(--text-available)' : 'var(--text-maintenance)', width: `${d.safety}%`, height: '100%' }}></div>
-                  </div>
-                  <span>{d.safety}%</span>
-                </div>
-              </td>
-              <td>
-                <span 
-                  className="status-badge"
-                  style={{
-                    background: d.status === 'Available' ? 'var(--badge-available)' : d.status === 'On Trip' ? 'var(--badge-ontrip)' : 'var(--badge-suspended)',
-                    color: d.status === 'Available' ? 'var(--text-available)' : d.status === 'On Trip' ? 'var(--text-ontrip)' : 'var(--text-retired)'
-                  }}
-                >
-                  {d.status}
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+  return <div className="drivers-page">
+    <header className="drivers-header">
+      <div><span className="drivers-eyebrow">Team management</span><h1>Drivers</h1><p>Manage operator credentials, safety and availability.</p></div>
+      <button className="drivers-add-button" type="button"><Plus size={17} /> Add driver</button>
+    </header>
+
+    <section className="drivers-summary-grid">
+      <article><span className="drivers-summary-icon"><UserRound size={17} /></span><div><strong>{mockDrivers.length}</strong><span>Total drivers</span></div></article>
+      <article><span className="drivers-summary-icon is-green"><ShieldCheck size={17} /></span><div><strong>{mockDrivers.filter((driver) => driver.status === "Available").length}</strong><span>Available now</span></div></article>
+      <article><span className="drivers-summary-icon is-blue"><Phone size={17} /></span><div><strong>96%</strong><span>Avg. safety score</span></div></article>
+      <article><span className="drivers-summary-icon is-red"><AlertTriangle size={17} /></span><div><strong>1</strong><span>Licence needs review</span></div></article>
+    </section>
+
+    <section className="drivers-directory">
+      <div className="drivers-toolbar"><div className="drivers-search"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name, licence or category" /></div><div className="drivers-filter"><Filter size={15} /><select aria-label="Filter drivers by status" value={status} onChange={(event) => setStatus(event.target.value)}><option>All drivers</option><option>Available</option><option>On Trip</option><option>Suspended</option><option>Off Duty</option></select><ChevronDown size={14} /></div></div>
+      <div className="drivers-table-wrap"><table className="drivers-table"><thead><tr><th>Driver</th><th>Licence</th><th>Category</th><th>Contact</th><th>Safety score</th><th>Licence expiry</th><th>Status</th><th aria-label="Actions" /></tr></thead><tbody>{drivers.map((driver) => {
+        const expired = driver.expiry.includes("EXPIRED");
+        return <tr key={driver.id}><td><div className="driver-identity"><span className={`driver-avatar avatar-${driver.id}`}>{initials(driver.name)}</span><strong>{driver.name}</strong></div></td><td>{driver.license}</td><td>{driver.category}</td><td>{driver.contact}</td><td><div className="driver-safety"><div><b style={{ width: `${driver.safety}%` }} /></div><strong className={driver.safety >= 90 ? "is-safe" : "is-watch"}>{driver.safety}%</strong></div></td><td><span className={expired ? "driver-expired" : ""}>{expired && <AlertTriangle size={13} />}{driver.expiry.replace(" EXPIRED", "")}</span></td><td><span className={`driver-status ${statusClass[driver.status]}`}>{driver.status}</span></td><td><div className="driver-row-actions"><button type="button" aria-label={`View ${driver.name}`}><Eye size={16} /></button><button type="button" aria-label={`More options for ${driver.name}`}><MoreHorizontal size={17} /></button></div></td></tr>;
+      })}</tbody></table></div>
+      {!drivers.length && <div className="drivers-empty"><UserRound size={22} /><strong>No drivers found</strong><span>Try changing the search or status filter.</span></div>}
+      <footer className="drivers-footer"><span>Showing <strong>{drivers.length}</strong> of {mockDrivers.length} drivers</span><span>Last updated today, 9:41 AM</span></footer>
+    </section>
+  </div>;
 }

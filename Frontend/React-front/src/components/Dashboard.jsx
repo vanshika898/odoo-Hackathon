@@ -1,78 +1,139 @@
-import React from 'react';
-import { mockRecentTrips } from '../mockData'; // Ensure yeh file exist karti ho
+import React from "react";
+import {
+  ArrowUpRight,
+  Banknote,
+  CheckCircle2,
+  CircleDollarSign,
+  Fuel,
+  MapPin,
+  MoreHorizontal,
+  Navigation,
+  Truck,
+} from "lucide-react";
+import { mockRecentTrips } from "../mockData";
+
+const statusStyle = {
+  "On Trip": "is-on-trip",
+  Completed: "is-completed",
+  Dispatched: "is-dispatched",
+  Draft: "is-draft",
+};
+
+function MapMarker({ className, children }) {
+  return <span className={`dashboard-map-marker ${className || ""}`}>{children}</span>;
+}
 
 export default function Dashboard() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-      <div>
-        <h2 style={{ fontSize: '1.75rem', fontWeight: '800' }}>Welcome back, Raven K.</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginTop: '4px' }}>
-          TransitOps console platform tracking and managing optimization streams.
-        </p>
-      </div>
+    <div className="dashboard-page">
+      <section className="dashboard-intro">
+        <div>
+          <span className="dashboard-eyebrow">Operations overview</span>
+          <h1>Good morning, Raven</h1>
+          <p>Here&apos;s a live snapshot of your fleet, routes and spending today.</p>
+        </div>
+        <button className="dashboard-date" type="button">
+          <span>12 July 2026</span>
+          <Navigation size={15} />
+        </button>
+      </section>
 
-      {/* KPI & Map Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-        
-        {/* Financial KPI Card */}
-        <div className="loadswift-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <span style={{ fontWeight: '700', fontSize: '1.1rem' }}>📈 Operation Funds</span>
+      <section className="dashboard-grid">
+        <div className="dashboard-left-column">
+          <article className="dashboard-summary-card dashboard-funds-card">
+            <div className="dashboard-card-heading">
+              <div className="dashboard-title-with-icon">
+                <span className="dashboard-icon-tile"><CircleDollarSign size={17} /></span>
+                <span>Available funds</span>
+              </div>
+              <button className="dashboard-icon-button" type="button" aria-label="View funds details"><ArrowUpRight size={17} /></button>
             </div>
-            <h1 style={{ fontSize: '2.5rem', fontWeight: '800', margin: '8px 0', color: 'var(--text-available)' }}>₹71,300.00</h1>
+            <div className="dashboard-funds-amount">₹71,300<span>.00</span></div>
+            <div className="dashboard-funds-footer">
+              <span><i className="dashboard-live-dot" />Updated just now</span>
+              <strong>81% <small>fleet utilised</small></strong>
+            </div>
+          </article>
+
+          <div className="dashboard-mini-grid">
+            <article className="dashboard-summary-card dashboard-mini-card">
+              <div className="dashboard-card-heading">
+                <div className="dashboard-title-with-icon">
+                  <span className="dashboard-icon-tile is-blue"><Truck size={16} /></span>
+                  <span>Active trips</span>
+                </div>
+                <MoreHorizontal size={19} color="#98a0ad" />
+              </div>
+              <strong className="dashboard-mini-value">12 <small>loads</small></strong>
+              <p>4 arriving within 2 hours</p>
+            </article>
+            <article className="dashboard-summary-card dashboard-mini-card">
+              <div className="dashboard-card-heading">
+                <div className="dashboard-title-with-icon">
+                  <span className="dashboard-icon-tile is-yellow"><Fuel size={16} /></span>
+                  <span>Fuel spend</span>
+                </div>
+                <MoreHorizontal size={19} color="#98a0ad" />
+              </div>
+              <strong className="dashboard-mini-value">₹18.4k</strong>
+              <p><b>8.6%</b> lower than last week</p>
+            </article>
           </div>
-          <div style={{ paddingTop: '16px', borderTop: '1px solid var(--border-muted)', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-            <span>Fleet Utilization Capacity: </span>
-            <span style={{ fontWeight: '700', color: 'var(--text-dark)' }}>81%</span>
-          </div>
+
+          <article className="dashboard-summary-card dashboard-rebate-card">
+            <div className="dashboard-card-heading">
+              <div className="dashboard-title-with-icon">
+                <span className="dashboard-icon-tile is-green"><Banknote size={16} /></span>
+                <span>Monthly savings</span>
+              </div>
+              <button className="dashboard-icon-button" type="button" aria-label="View savings details"><ArrowUpRight size={17} /></button>
+            </div>
+            <div className="dashboard-saving-line">
+              <div><strong>₹48,321</strong><span>in route and fuel savings</span></div>
+              <span className="dashboard-positive">+12.4%</span>
+            </div>
+          </article>
         </div>
 
-        {/* Tracking Map Widget */}
-        <div className="loadswift-card" style={{ padding: '0', overflow: 'hidden', height: '240px', position: 'relative' }}>
-          <div style={{ position: 'absolute', top: '16px', left: '16px', zIndex: 2, background: '#fff', padding: '6px 14px', borderRadius: '6px', fontWeight: '700', fontSize: '0.85rem', border: '1px solid var(--border-muted)' }}>Active Tracking Map</div>
-          <div style={{ width: '100%', height: '100%', background: '#e5e9f0', backgroundImage: 'radial-gradient(#ccd3e0 2px, transparent 2px)', backgroundSize: '16px 16px', opacity: 0.8 }}>
-             {/* Map Pins */}
-             <div style={{ position: 'absolute', top: '40%', left: '30%', width: '12px', height: '12px', background: 'var(--text-dark)', borderRadius: '50%', border: '2px solid #fff' }}></div>
-             <div style={{ position: 'absolute', top: '60%', left: '70%', width: '24px', height: '24px', background: 'var(--text-ontrip)', borderRadius: '50%', border: '4px solid #fff' }}></div>
+        <article className="dashboard-map-card">
+          <div className="dashboard-map-toolbar">
+            <div><span className="dashboard-map-title">Live fleet tracking</span><span className="dashboard-map-subtitle">8 vehicles currently on route</span></div>
+            <button type="button">View map <ArrowUpRight size={15} /></button>
           </div>
-        </div>
-      </div>
+          <div className="dashboard-map-canvas" aria-label="Fleet route preview">
+            <div className="dashboard-road road-one" /><div className="dashboard-road road-two" /><div className="dashboard-road road-three" />
+            <div className="dashboard-route route-a" /><div className="dashboard-route route-b" />
+            <MapMarker className="marker-a"><Truck size={14} /></MapMarker>
+            <MapMarker className="marker-b"><Truck size={14} /></MapMarker>
+            <MapMarker className="marker-c"><Truck size={14} /></MapMarker>
+            <MapMarker className="marker-d"><MapPin size={13} /></MapMarker>
+            <div className="dashboard-map-label label-start">Ahmedabad, GJ</div>
+            <div className="dashboard-map-label label-end">Pune, MH</div>
+            <div className="dashboard-map-legend"><i /> Active vehicle</div>
+          </div>
+        </article>
+      </section>
 
-      {/* Recent Trips Table */}
-      <div className="loadswift-card">
-        <h3 style={{ marginBottom: '20px', fontWeight: '700' }}>Recent Fleet Trip Dispatch Deployments</h3>
-        <table className="loadswift-table">
-          <thead>
-            <tr>
-              <th>TRIP IDENTIFIER</th>
-              <th>RESOURCE VEHICLE</th>
-              <th>ASSIGNED OPERATOR</th>
-              <th>LIVE STATE ENGINE</th>
-            </tr>
-          </thead>
-          <tbody>
-            {mockRecentTrips && mockRecentTrips.map(trip => (
-              <tr key={trip.id}>
-                <td style={{ fontWeight: '700' }}>#{trip.id}</td>
-                <td>{trip.vehicle}</td>
-                <td>{trip.driver}</td>
-                <td>
-                  <span 
-                    className="status-badge" 
-                    style={{
-                      background: trip.status === 'On Trip' ? 'var(--badge-ontrip)' : 'var(--badge-available)',
-                      color: trip.status === 'On Trip' ? 'var(--text-ontrip)' : 'var(--text-available)'
-                    }}
-                  >
-                    {trip.status}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <section className="dashboard-recent-card">
+        <div className="dashboard-recent-heading">
+          <div><h2>Recent trips</h2><p>Latest dispatches across your fleet</p></div>
+          <button type="button">View all <ArrowUpRight size={15} /></button>
+        </div>
+        <div className="dashboard-table-wrap">
+          <table className="dashboard-table">
+            <thead><tr><th>Trip ID</th><th>Vehicle</th><th>Driver</th><th>ETA</th><th>Status</th></tr></thead>
+            <tbody>
+              {mockRecentTrips?.map((trip) => (
+                <tr key={trip.id}>
+                  <td><span className="dashboard-trip-id"><Truck size={15} />{trip.id}</span></td>
+                  <td>{trip.vehicle}</td><td>{trip.driver}</td><td>{trip.eta}</td>
+                  <td><span className={`dashboard-status ${statusStyle[trip.status] || "is-draft"}`}>{trip.status === "Completed" && <CheckCircle2 size={13} />}{trip.status}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }
