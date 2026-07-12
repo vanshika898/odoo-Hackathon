@@ -1,16 +1,32 @@
-# React + Vite
+# TransitOps Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This folder contains the React-based user interface for the TransitOps fleet operations dashboard.
 
-Currently, two official plugins are available:
+The UI is built with:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React 19
+- Vite
+- lucide-react icons
+- ESLint for code quality
 
-## React Compiler
+## Frontend features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- login flow with token-based session validation
+- dashboard overview for fleet operations
+- vehicle, driver, trip, maintenance, fuel & expense management
+- analytics and reporting modules
+- role-aware navigation via sidebar modules
 
-## Expanding the ESLint configuration
+## Start the frontend
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+cd Frontend/React-front
+npm install
+npm run dev
+```
+
+Then visit `http://localhost:5173`.
+
+## Project notes
+
+For the full project overview, backend setup, and API details, see the root `README.md`.
