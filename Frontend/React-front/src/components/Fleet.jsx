@@ -3,22 +3,45 @@ import { mockVehicles } from '../mockData';
 
 export default function Fleet() {
   return (
-    <div className="odoo-card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <h3>Vehicle Configuration Registry Console</h3>
-        <button style={{ background: 'var(--accent-odoo)', border: 'none', padding: '10px 20px', color: '#fff', borderRadius: '4px', fontWeight: '600' }}>+ Add Vehicle</button>
+    <div className="loadswift-card">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <div>
+          <h3 style={{ fontWeight: '700' }}>Vehicle Configuration Master Registry</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '2px' }}>Total vehicles configured in standard deployment loops.</p>
+        </div>
+        <button style={{ background: 'var(--text-dark)', border: 'none', padding: '12px 24px', color: '#fff', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>+ Add Asset Model</button>
       </div>
-      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+
+      <table className="loadswift-table">
         <thead>
-          <tr style={{ color: 'var(--text-muted)', borderBottom: '1px solid var(--border-color)' }}>
-            <th style={{ paddingBottom: '12px' }}>REG. NO.</th><th>MODEL NAME</th><th>TYPE</th><th>CAPACITY</th><th>ODOMETER</th><th>STATUS</th>
+          <tr>
+            <th>REGISTRATION NO.</th>
+            <th>ASSET MODEL</th>
+            <th>CLASSIFICATION</th>
+            <th>MAX CAPACITY</th>
+            <th>ODOMETER</th>
+            <th>SYSTEM STATUS</th>
           </tr>
         </thead>
         <tbody>
           {mockVehicles.map(v => (
-            <tr key={v.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-              <td style={{ padding: '14px 0' }}>{v.reg_no}</td><td>{v.name}</td><td>{v.type}</td><td>{v.capacity} kg</td><td>{v.odometer}</td>
-              <td><span className={`status-badge status-${v.status.toLowerCase().replace(' ', '')}`}>{v.status}</span></td>
+            <tr key={v.id}>
+              <td style={{ fontWeight: '600' }}>{v.reg_no}</td>
+              <td>{v.name}</td>
+              <td>{v.type}</td>
+              <td>{v.capacity} kg</td>
+              <td>{v.odometer} km</td>
+              <td>
+                <span 
+                  className="status-badge"
+                  style={{
+                    background: v.status === 'Available' ? 'var(--badge-available)' : v.status === 'On Trip' ? 'var(--badge-ontrip)' : v.status === 'In Shop' ? 'var(--badge-maintenance)' : 'var(--badge-retired)',
+                    color: v.status === 'Available' ? 'var(--text-available)' : v.status === 'On Trip' ? 'var(--text-ontrip)' : v.status === 'In Shop' ? 'var(--text-maintenance)' : 'var(--text-retired)'
+                  }}
+                >
+                  {v.status}
+                </span>
+              </td>
             </tr>
           ))}
         </tbody>

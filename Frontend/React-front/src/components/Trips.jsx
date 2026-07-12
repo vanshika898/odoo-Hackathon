@@ -7,187 +7,61 @@ export default function Trips() {
   const [validationError, setValidationError] = useState('');
 
   const handleWeightChange = (e) => {
-    const value = e.target.value;
-    setCargoWeight(value);
-
-    const weight = parseFloat(value);
-
-    if (isNaN(weight)) {
-      setValidationError('');
-      return;
-    }
-
+    const weight = parseFloat(e.target.value);
+    setCargoWeight(e.target.value);
     const limit = selectedVehicle === 'VAN-05' ? 500 : 5000;
-
     if (weight > limit) {
-      setValidationError(
-        `Vehicle Capacity: ${limit} kg | Cargo Weight: ${weight} kg ❌ Capacity exceeded by ${weight - limit} kg — dispatch blocked.`
-      );
+      setValidationError(`Allocation Alert: Vehicle Limit: ${limit} kg | Requested Input: ${weight} kg. ❌ Mass index limit breach — configuration blocked.`);
     } else {
       setValidationError('');
     }
   };
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '1.2fr 1fr',
-        gap: '30px',
-      }}
-    >
-      <div className="odoo-card">
-        <h3>Deploy New Operational Trip Dispatcher</h3>
-
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-            marginTop: '20px',
-          }}
-        >
+    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '32px' }}>
+      {/* Interactive Input Form Control Area */}
+      <div className="loadswift-card">
+        <h3 style={{ fontWeight: '700', marginBottom: '4px' }}>Deploy New Active Route Segment</h3>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '24px' }}>System checks validation limits instantly upon data input.</p>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <div><label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', marginBottom: '6px' }}>ORIGIN DISPATCH DEPOT</label><input type="text" placeholder="e.g., Gandhinagar Depot" className="loadswift-input" /></div>
+          <div><label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', marginBottom: '6px' }}>DESTINATION DELIVERY TERMINAL</label><input type="text" placeholder="e.g., Ahmedabad Hub" className="loadswift-input" /></div>
           <div>
-            <label style={{ color: 'var(--text-muted)' }}>
-              SOURCE NODE DEPOT
-            </label>
-            <input
-              type="text"
-              placeholder="Gandhinagar Depot"
-              className="odoo-input"
-            />
-          </div>
-
-          <div>
-            <label style={{ color: 'var(--text-muted)' }}>
-              DESTINATION HUB
-            </label>
-            <input
-              type="text"
-              placeholder="Ahmedabad Hub"
-              className="odoo-input"
-            />
-          </div>
-
-          <div>
-            <label style={{ color: 'var(--text-muted)' }}>
-              VEHICLE ALLOCATION POOL
-            </label>
-
-            <select
-              className="odoo-input"
-              value={selectedVehicle}
-              onChange={(e) => {
-                const vehicle = e.target.value;
-                setSelectedVehicle(vehicle);
-
-                if (cargoWeight !== '') {
-                  const weight = parseFloat(cargoWeight);
-                  const limit = vehicle === 'VAN-05' ? 500 : 5000;
-
-                  if (weight > limit) {
-                    setValidationError(
-                      `Vehicle Capacity: ${limit} kg | Cargo Weight: ${weight} kg ❌ Capacity exceeded by ${weight - limit} kg — dispatch blocked.`
-                    );
-                  } else {
-                    setValidationError('');
-                  }
-                }
-              }}
-            >
-              <option value="VAN-05">
-                VAN-05 (Max Capacity: 500 kg)
-              </option>
-              <option value="TRUCK-11">
-                TRUCK-11 (Max Capacity: 5000 kg)
-              </option>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', marginBottom: '6px' }}>TARGET POOL ASSET RESOURCE</label>
+            <select className="loadswift-input" value={selectedVehicle} onChange={e => setSelectedVehicle(e.target.value)}>
+              <option value="VAN-05">VAN-05 (Max Capacity Baseline: 500 kg)</option>
+              <option value="TRUCK-11">TRUCK-11 (Max Capacity Baseline: 5000 kg)</option>
             </select>
           </div>
-
           <div>
-            <label style={{ color: 'var(--text-muted)' }}>
-              CARGO WEIGHT RECORD (KG)
-            </label>
-
-            <input
-              type="number"
-              value={cargoWeight}
-              onChange={handleWeightChange}
-              placeholder="Enter cargo load mass"
-              className="odoo-input"
-            />
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', marginBottom: '6px' }}>CARGO LOAD WEIGHT (KG)</label>
+            <input type="number" value={cargoWeight} onChange={handleWeightChange} placeholder="Enter manifest payload mass index" className="loadswift-input" />
           </div>
 
           {validationError && (
-            <div
-              style={{
-                background: 'rgba(255,102,102,0.1)',
-                border: '1px solid var(--status-retired)',
-                padding: '14px',
-                borderRadius: '6px',
-                color: 'var(--status-retired)',
-                fontSize: '0.9rem',
-              }}
-            >
+            <div style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid var(--text-retired)', padding: '14px', borderRadius: '8px', color: 'var(--text-retired)', fontSize: '0.9rem', lineHeight: '1.4' }}>
               {validationError}
             </div>
           )}
 
-          <button
-            disabled={!!validationError}
-            style={{
-              background: validationError
-                ? '#2c2c35'
-                : 'var(--accent-odoo)',
-              color: '#fff',
-              border: 'none',
-              padding: '14px',
-              borderRadius: '6px',
-              cursor: validationError ? 'not-allowed' : 'pointer',
-              fontWeight: '600',
-            }}
-          >
-            Dispatch Active Run Workflow
+          <button disabled={!!validationError} style={{ background: validationError ? '#b1b5c3' : 'var(--text-dark)', color: '#fff', border: 'none', padding: '14px', borderRadius: '8px', cursor: validationError ? 'not-allowed' : 'pointer', fontWeight: '700', fontSize: '0.95rem', transition: '0.2s' }}>
+            Initialize Route Manifest Execution
           </button>
         </div>
       </div>
 
-      <div className="odoo-card">
-        <h3>Live Structural Active Execution Matrix</h3>
-
-        <div
-          style={{
-            marginTop: '20px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '14px',
-          }}
-        >
-          {mockRecentTrips.map((t) => (
-            <div
-              key={t.id}
-              style={{
-                padding: '16px',
-                background: 'var(--bg-surface)',
-                borderRadius: '6px',
-                borderLeft: `4px solid ${
-                  t.status === 'On Trip'
-                    ? 'var(--status-ontrip)'
-                    : 'var(--border-color)'
-                }`,
-              }}
-            >
-              <h4>{t.id} : Active Node Execution Segment</h4>
-
-              <p
-                style={{
-                  fontSize: '0.85rem',
-                  color: 'var(--text-muted)',
-                  marginTop: '4px',
-                }}
-              >
-                Resource Allocation: {t.vehicle} / Driver Target Matrix
-              </p>
+      {/* Right Content Live View Board */}
+      <div className="loadswift-card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <h3 style={{ fontWeight: '700' }}>Active Node Deployment Streams</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {mockRecentTrips.map(t => (
+            <div key={t.id} style={{ padding: '18px', background: '#f8f9fa', borderRadius: '10px', border: '1px solid var(--border-muted)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: '700' }}>#{t.id}</span>
+                <span className="status-badge" style={{ background: t.status==='On Trip'?'var(--badge-ontrip)':'#f4f5f6', color: t.status==='On Trip'?'var(--text-ontrip)':'var(--text-dark)', fontSize: '0.75rem' }}>{t.status}</span>
+              </div>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '8px' }}>Logistics Asset Mapping: <strong style={{ color: 'var(--text-dark)' }}>{t.vehicle}</strong> assigned to operator matrix pools.</p>
             </div>
           ))}
         </div>

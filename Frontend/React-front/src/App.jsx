@@ -7,8 +7,8 @@ import Trips from './components/Trips';
 import Maintenance from './components/Maintenance';
 import Expenses from './components/Expenses';
 import Analytics from './components/Analytics';
-import Login from './components/Login';
 import Settings from './components/Settings';
+import Login from './components/Login';
 import './index.css';
 
 export default function App() {
@@ -23,15 +23,17 @@ export default function App() {
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)' }}>
       <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} />
       
-      <div style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', borderBottom: '1px solid var(--border-color)', paddingBottom: '20px' }}>
-          <input type="text" placeholder="Search operational matrices..." className="odoo-input" style={{ maxWidth: '320px' }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Raven K.</span>
-            <span style={{ background: '#24242b', padding: '6px 12px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: '600', color: 'var(--accent-odoo)' }}>DISPATCHER</span>
+      <div style={{ flex: 1, padding: '40px 60px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        {/* TOP STATUS NAVIGATION BAR HUB */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-surface)', padding: '16px 24px', borderRadius: '12px', border: '1px solid var(--border-muted)' }}>
+          <span style={{ fontWeight: '700', color: 'var(--text-dark)', fontSize: '0.95rem' }}>Active Workspace Context Engine</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.85rem', fontWeight: '600' }}>
+            <span style={{ color: 'var(--text-muted)' }}>Current Route Layer:</span>
+            <span style={{ background: '#f1f2f4', padding: '4px 10px', borderRadius: '4px' }}>{currentTab.toUpperCase()}</span>
           </div>
         </div>
 
+        {/* CONTROLLER SWITCH CONTAINER VIEWPORT BLOCK */}
         {currentTab === 'Dashboard' && <Dashboard />}
         {currentTab === 'Fleet' && <Fleet />}
         {currentTab === 'Drivers' && <Drivers />}

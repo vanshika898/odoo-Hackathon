@@ -1,141 +1,89 @@
-/* :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
-
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+:root {
+  /* Matte Dark Sidebar Base */
+  --bg-sidebar: #141416;
+  --sidebar-active: #232326;
+  
+  /* Clean Light Canvas Surface Workspace */
+  --bg-primary: #f4f5f8;
+  --bg-surface: #ffffff;
+  --border-muted: #e6e8ec;
+  
+  /* Brand Highlighting Colors */
+  --accent-gold: #f5c200;
+  --accent-gold-hover: #e0b200;
+  --text-dark: #141416;
+  --text-muted: #777e90;
+  
+  /* Crisp Status Badges Color Tokens */
+  --badge-available: #e6f6ec;
+  --text-available: #3da35d;
+  --badge-ontrip: #ebf3ff;
+  --text-ontrip: #3b82f6;
+  --badge-maintenance: #fef6e0;
+  --text-maintenance: #d97706;
+  --badge-retired: #fdf2f2;
+  --text-retired: #ef4444;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, sans-serif;
 }
 
 body {
-  margin: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-dark);
+  -webkit-font-smoothing: antialiased;
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+/* LoadSwift Premium Functional Card Elevation UI Elements */
+.loadswift-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-muted);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.02);
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+/* Inputs styled with crisp container borders */
+.loadswift-input {
+  width: 100%;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border: 1px solid var(--border-muted);
+  border-radius: 8px;
+  color: var(--text-dark);
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
+.loadswift-input:focus {
+  outline: none;
+  border-color: var(--text-dark);
+  background: #ffffff;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+/* Table Elements Modern Restyling Matrix */
+.loadswift-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
-} */
-
-
-:root {
-  --bg-primary: #0a0a0c;
-  --bg-surface: #121214;
-  --bg-card: #1e1e24;
-  --accent-odoo: #a65d00;      
-  --accent-hover: #c47202;
-  --border-color: #2d2d34;
-  --text-main: #f3f4f6;
-  --text-muted: #9ca3af;
-
-  --status-available: #3da35d;
-  --status-ontrip: #4da1ff;
-  --status-suspended: #ff8533;
-  --status-retired: #ff6666;
-  --status-draft: #5a5a62;
+.loadswift-table th {
+  padding: 14px 16px;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border-muted);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-body { background-color: var(--bg-primary); color: var(--text-main); }
-.odoo-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 24px; }
-.status-badge { padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-block; text-transform: uppercase; }
-.status-available { background: rgba(61, 163, 93, 0.15); color: var(--status-available); border: 1px solid var(--status-available); }
-.status-ontrip { background: rgba(77, 161, 255, 0.15); color: var(--status-ontrip); border: 1px solid var(--status-ontrip); }
-.status-suspended { background: rgba(255, 133, 51, 0.15); color: var(--status-suspended); border: 1px solid var(--status-suspended); }
-.status-retired { background: rgba(255, 102, 102, 0.15); color: var(--status-retired); border: 1px solid var(--status-retired); }
-.status-draft { background: rgba(90, 90, 98, 0.15); color: var(--text-main); border: 1px solid var(--status-draft); }
-.odoo-input { width: 100%; padding: 12px 16px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); }
-.odoo-input:focus { outline: none; border-color: var(--accent-odoo); }
+.loadswift-table td {
+  padding: 16px;
+  font-size: 0.95rem;
+  border-bottom: 1px solid var(--border-muted);
+  color: var(--text-dark);
+}

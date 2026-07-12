@@ -3,22 +3,50 @@ import { mockDrivers } from '../mockData';
 
 export default function Drivers() {
   return (
-    <div className="odoo-card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <h3>Drivers & Safety Profiles Console</h3>
-        <button style={{ background: 'var(--accent-odoo)', border: 'none', padding: '10px 20px', color: '#fff', borderRadius: '4px', fontWeight: '600' }}>+ Add Driver</button>
+    <div className="loadswift-card">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <div>
+          <h3 style={{ fontWeight: '700' }}>Personnel & License Safety Engine</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '2px' }}>Validating active regulatory certifications.</p>
+        </div>
+        <button style={{ background: 'var(--text-dark)', border: 'none', padding: '12px 24px', color: '#fff', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>+ Add Operator</button>
       </div>
-      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+
+      <table className="loadswift-table">
         <thead>
-          <tr style={{ color: 'var(--text-muted)', borderBottom: '1px solid var(--border-color)' }}>
-            <th style={{ paddingBottom: '12px' }}>OPERATOR</th><th>LICENSE NO.</th><th>EXPIRY DATE</th><th>SAFETY SCORE</th><th>STATUS</th>
+          <tr>
+            <th>OPERATOR NAME</th>
+            <th>LICENSE IDENTIFIER</th>
+            <th>EXPIRY DATE</th>
+            <th>SAFETY INDEX</th>
+            <th>OPERATIONAL STATUS</th>
           </tr>
         </thead>
         <tbody>
           {mockDrivers.map(d => (
-            <tr key={d.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-              <td style={{ padding: '14px 0' }}>{d.name}</td><td>{d.license}</td><td>{d.expiry}</td><td>{d.safety}%</td>
-              <td><span className={`status-badge status-${d.status.toLowerCase().replace(' ', '')}`}>{d.status}</span></td>
+            <tr key={d.id}>
+              <td style={{ fontWeight: '600' }}>{d.name}</td>
+              <td>{d.license}</td>
+              <td style={{ color: d.expiry.includes('EXPIRED') ? 'var(--text-retired)' : 'inherit', fontWeight: d.expiry.includes('EXPIRED') ? '600' : 'normal' }}>{d.expiry}</td>
+              <td>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ background: '#e6e8ec', width: '60px', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ background: d.safety > 90 ? 'var(--text-available)' : 'var(--text-maintenance)', width: `${d.safety}%`, height: '100%' }}></div>
+                  </div>
+                  <span>{d.safety}%</span>
+                </div>
+              </td>
+              <td>
+                <span 
+                  className="status-badge"
+                  style={{
+                    background: d.status === 'Available' ? 'var(--badge-available)' : d.status === 'On Trip' ? 'var(--badge-ontrip)' : 'var(--badge-suspended)',
+                    color: d.status === 'Available' ? 'var(--text-available)' : d.status === 'On Trip' ? 'var(--text-ontrip)' : 'var(--text-retired)'
+                  }}
+                >
+                  {d.status}
+                </span>
+              </td>
             </tr>
           ))}
         </tbody>
