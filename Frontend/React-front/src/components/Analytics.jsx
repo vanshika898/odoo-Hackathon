@@ -1,31 +1,214 @@
-import React, { useState } from "react";
-import { ArrowDownRight, ArrowUpRight, BarChart3, ChevronDown, CircleDollarSign, Gauge, Route, TrendingUp } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { ArrowDownRight, ArrowUpRight, BarChart3, ChevronDown, CircleDollarSign, Gauge, Route, TrendingUp, Download, Eye } from "lucide-react";
+import { api } from "../api";
 
-const chartData = {
-  "Trip volume": { value: "128", label: "completed trips", change: "+14.8%", points: "0,93 38,75 75,82 112,50 150,62 188,29 225,40 263,13 300,25 338,7 376,20 414,4 452,14 490,3", fill: "0,104 0,93 38,75 75,82 112,50 150,62 188,29 225,40 263,13 300,25 338,7 376,20 414,4 452,14 490,3 490,105 0,105" },
-  "Fuel efficiency": { value: "8.4", label: "km per litre", change: "+3.2%", points: "0,71 38,64 75,76 112,55 150,61 188,42 225,52 263,34 300,38 338,20 376,28 414,15 452,21 490,11", fill: "0,104 0,71 38,64 75,76 112,55 150,61 188,42 225,52 263,34 300,38 338,20 376,28 414,15 452,21 490,11 490,105 0,105" },
-  "Operating cost": { value: "₹32.5k", label: "this month", change: "-8.6%", points: "0,29 38,35 75,23 112,47 150,40 188,58 225,49 263,68 300,59 338,76 376,68 414,86 452,79 490,92", fill: "0,104 0,29 38,35 75,23 112,47 150,40 188,58 225,49 263,68 300,59 338,76 376,68 414,86 452,79 490,92 490,105 0,105" },
-};
+export default function Analytics({ user }) {
+  const [loading, setLoading] = useState(true);
+  const [reportData, setReportData] = useState([]);
+  const [averages, setAverages] = useState({
+    avgEfficiency: 0,
+    totalOperationalCost: 0,
+    avgROI: 0
+  });
 
-export default function Analytics() {
-  const [metric, setMetric] = useState("Trip volume");
-  const [period, setPeriod] = useState("Last 30 days");
-  const chart = chartData[metric];
-  return <div className="analytics-page">
-    <header className="analytics-header"><div><span className="analytics-eyebrow">Performance intelligence</span><h1>Analytics</h1><p>Turn fleet operations into clearer, faster decisions.</p></div><div className="analytics-period"><select aria-label="Analytics time period" value={period} onChange={(event) => setPeriod(event.target.value)}><option>Last 30 days</option><option>Last 90 days</option><option>This year</option></select><ChevronDown size={14} /></div></header>
+  const isFinancialAnalyst = user?.accountType === "FinancialAnalyst";
+  const isFleetManager = user?.accountType === "FleetManager";
+  const isAdmin = user?.accountType === "Admin";
+  
+  const canViewROI = isFinancialAnalyst || isAdmin;
+  const canReadReports = isFleetManager || isFinancialAnalyst || isAdmin;
 
-    <section className="analytics-kpi-grid">
-      <article><span className="analytics-kpi-icon is-blue"><Gauge size={17} /></span><div><span>Fuel efficiency</span><strong>8.4 <small>km/L</small></strong><p><ArrowUpRight size={13} /> 3.2% from last period</p></div></article>
-      <article><span className="analytics-kpi-icon is-yellow"><BarChart3 size={17} /></span><div><span>Fleet utilization</span><strong>81<small>%</small></strong><p><ArrowUpRight size={13} /> 4.1% from last period</p></div></article>
-      <article><span className="analytics-kpi-icon is-red"><CircleDollarSign size={17} /></span><div><span>Operating cost</span><strong>₹34,070</strong><p className="analytics-negative"><ArrowDownRight size={13} /> 8.6% from last period</p></div></article>
-      <article><span className="analytics-kpi-icon is-green"><TrendingUp size={17} /></span><div><span>Fleet ROI</span><strong>14.2<small>%</small></strong><p><ArrowUpRight size={13} /> 1.8% from last period</p></div></article>
-    </section>
+  const fetchReports = async () => {
+    setLoading(true);
+    try {
+      // Fetch operational cost, fuel efficiency, and ROI data
+      const efficiencyRes = await api.get("/reports/fuel-efficiency");
+      const costRes = await api.get("/reports/operational-cost");
+      
+      let roiRes = { success: false, data: [] };
+      if (canViewROI) {
+        roiRes = await api.get("/reports/roi");
+      }
 
-    <section className="analytics-main-grid">
-      <article className="analytics-trend-card"><header><div><h2>Performance trend</h2><p>{chart.label} across {period.toLowerCase()}.</p></div><div className="analytics-tabs">{Object.keys(chartData).map((item) => <button type="button" className={metric === item ? "is-active" : ""} key={item} onClick={() => setMetric(item)}>{item}</button>)}</div></header><div className="analytics-chart-summary"><strong>{chart.value}</strong><span className={chart.change.startsWith("-") ? "is-down" : ""}>{chart.change.startsWith("-") ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}{chart.change}</span></div><div className="analytics-line-chart"><svg viewBox="0 0 490 110" preserveAspectRatio="none" aria-label={`${metric} line chart`} role="img"><defs><linearGradient id="analytics-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#2588ed" stopOpacity=".19" /><stop offset="100%" stopColor="#2588ed" stopOpacity="0" /></linearGradient></defs><line x1="0" x2="490" y1="22" y2="22" /><line x1="0" x2="490" y1="53" y2="53" /><line x1="0" x2="490" y1="84" y2="84" /><polygon points={chart.fill} fill="url(#analytics-area)" /><polyline points={chart.points} fill="none" stroke="#2588ed" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg></div><div className="analytics-chart-dates"><span>01 Jul</span><span>07 Jul</span><span>14 Jul</span><span>21 Jul</span><span>28 Jul</span></div></article>
-      <article className="analytics-utilization-card"><header><div><h2>Fleet utilization</h2><p>Vehicle availability by status.</p></div><button type="button">View fleet</button></header><div className="analytics-donut-wrap"><div className="analytics-donut"><strong>81<small>%</small></strong><span>utilized</span></div><div className="analytics-donut-legend"><span><i className="is-active" />On route <b>4</b></span><span><i className="is-available" />Available <b>3</b></span><span><i className="is-service" />In service <b>1</b></span></div></div><div className="analytics-utilization-note"><Route size={16} /><span>4 vehicles are currently serving active loads.</span></div></article>
-    </section>
+      if (efficiencyRes.success && costRes.success) {
+        // Merge data by vehicle name/registration
+        const merged = efficiencyRes.data.map(eff => {
+          const costItem = costRes.data.find(c => c.registrationNumber === eff.registrationNumber) || {};
+          const roiItem = roiRes.data ? roiRes.data.find(r => r.registrationNumber === eff.registrationNumber) : null;
+          
+          return {
+            registrationNumber: eff.registrationNumber,
+            name: eff.name,
+            type: eff.type,
+            fuelEfficiency: eff.fuelEfficiency,
+            totalFuelCost: costItem.totalFuelCost || 0,
+            totalMaintenanceCost: costItem.totalMaintenanceCost || 0,
+            operationalCost: costItem.operationalCost || 0,
+            roi: roiItem ? roiItem.roi : null
+          };
+        });
 
-    <section className="analytics-bottom-grid"><article className="analytics-routes-card"><header><div><h2>Top routes</h2><p>Most active corridors this month.</p></div><button type="button">View all</button></header><div className="analytics-route-row"><div><strong>Ahmedabad → Pune</strong><span>24 completed trips</span></div><b><i style={{ width: "86%" }} /></b><em>86%</em></div><div className="analytics-route-row"><div><strong>Surat → Vadodara</strong><span>19 completed trips</span></div><b><i style={{ width: "68%" }} /></b><em>68%</em></div><div className="analytics-route-row"><div><strong>Rajkot → Ahmedabad</strong><span>14 completed trips</span></div><b><i style={{ width: "53%" }} /></b><em>53%</em></div></article><article className="analytics-insight-card"><span><TrendingUp size={17} /></span><div><h2>Efficiency insight</h2><p>Your fuel efficiency is <strong>3.2% above</strong> its recent average. Keep routing active trips through the Ahmedabad–Pune corridor to preserve the gain.</p><button type="button">See recommendations <ArrowUpRight size={14} /></button></div></article></section>
-  </div>;
+        setReportData(merged);
+
+        // Calculate aggregates
+        const totalCost = merged.reduce((sum, item) => sum + item.operationalCost, 0);
+        
+        const validEffs = merged.filter(item => item.fuelEfficiency > 0);
+        const avgEff = validEffs.length > 0 ? (validEffs.reduce((sum, item) => sum + item.fuelEfficiency, 0) / validEffs.length) : 0;
+
+        const validROIs = merged.filter(item => item.roi !== null);
+        const avgROI = validROIs.length > 0 ? (validROIs.reduce((sum, item) => sum + item.roi, 0) / validROIs.length) : 0;
+
+        setAverages({
+          avgEfficiency: Number(avgEff.toFixed(2)),
+          totalOperationalCost: totalCost,
+          avgROI: Number((avgROI * 100).toFixed(2)) // express as percentage
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load reports:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (canReadReports) {
+      fetchReports();
+    }
+  }, [user]);
+
+  const handleExportCSV = async () => {
+    try {
+      const csvData = await api.get("/reports/export-csv");
+      const blob = new Blob([csvData], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.setAttribute("href", url);
+      a.setAttribute("download", `transitops_fleet_report_${Date.now()}.csv`);
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      alert("Failed to export report CSV: " + error.message);
+    }
+  };
+
+  if (!canReadReports) {
+    return (
+      <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)", background: "var(--bg-surface)", borderRadius: "10px" }}>
+        🔐 Report analytics access is restricted to Financial Analysts and Fleet Managers.
+      </div>
+    );
+  }
+
+  return (
+    <div className="analytics-page">
+      <header className="analytics-header">
+        <div>
+          <span className="analytics-eyebrow">Performance intelligence</span>
+          <h1>Analytics & Reports</h1>
+          <p>Turn fleet operations data into clearer financial decisions.</p>
+        </div>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button 
+            onClick={handleExportCSV} 
+            className="fleet-export-button" 
+            type="button"
+            style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}
+          >
+            <Download size={16} /> Export CSV Report
+          </button>
+        </div>
+      </header>
+
+      {loading ? (
+        <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
+          Compiling ledger reports...
+        </div>
+      ) : (
+        <>
+          <section className="analytics-kpi-grid">
+            <article>
+              <span className="analytics-kpi-icon is-blue"><Gauge size={17} /></span>
+              <div>
+                <span>Avg Fuel Efficiency</span>
+                <strong>{averages.avgEfficiency} <small>km/L</small></strong>
+                <p>Telemetry-derived average</p>
+              </div>
+            </article>
+            <article>
+              <span className="analytics-kpi-icon is-red"><CircleDollarSign size={17} /></span>
+              <div>
+                <span>Total Operational Cost</span>
+                <strong>₹{averages.totalOperationalCost?.toLocaleString()}</strong>
+                <p>Fuel + Maintenance total</p>
+              </div>
+            </article>
+            <article>
+              <span className="analytics-kpi-icon is-green"><TrendingUp size={17} /></span>
+              <div>
+                <span>Average Fleet ROI</span>
+                <strong>
+                  {canViewROI ? `${averages.avgROI}%` : "Restricted"}
+                </strong>
+                <p>Asset returns metrics</p>
+              </div>
+            </article>
+          </section>
+
+          <section className="fleet-registry" style={{ marginTop: "24px" }}>
+            <h2 style={{ fontSize: "1.2rem", fontWeight: "800", padding: "20px 24px 10px" }}>Asset Financial Sheets</h2>
+            <div className="fleet-table-wrap">
+              <table className="fleet-table">
+                <thead>
+                  <tr>
+                    <th>Vehicle Asset</th>
+                    <th>Type</th>
+                    <th>Fuel Efficiency</th>
+                    <th>Fuel Costs</th>
+                    <th>Maintenance Costs</th>
+                    <th>Operational Cost</th>
+                    <th>ROI</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportData.map((item) => (
+                    <tr key={item.registrationNumber}>
+                      <td>
+                        <strong>{item.name}</strong> 
+                        <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginLeft: "6px" }}>
+                          ({item.registrationNumber})
+                        </span>
+                      </td>
+                      <td>{item.type}</td>
+                      <td>{item.fuelEfficiency > 0 ? `${item.fuelEfficiency} km/L` : "—"}</td>
+                      <td>₹{item.totalFuelCost?.toLocaleString()}</td>
+                      <td>₹{item.totalMaintenanceCost?.toLocaleString()}</td>
+                      <td><strong>₹{item.operationalCost?.toLocaleString()}</strong></td>
+                      <td>
+                        {canViewROI ? (
+                          <span style={{ fontWeight: "700", color: item.roi >= 0 ? "#15803d" : "#b91c1c" }}>
+                            {item.roi !== null ? `${(item.roi * 100).toFixed(2)}%` : "0.00%"}
+                          </span>
+                        ) : (
+                          <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Restricted</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {!reportData.length && (
+              <div className="fleet-empty">
+                <BarChart3 size={22} />
+                <strong>No asset telemetry found</strong>
+                <span>Add vehicles and log completed trips to generate reports.</span>
+              </div>
+            )}
+          </section>
+        </>
+      )}
+    </div>
+  );
 }

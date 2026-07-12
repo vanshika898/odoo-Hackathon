@@ -41,23 +41,48 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
-const connectionDb = require("./config/Database");
-const routes = require('./routes/UserRoutes')
-dotenv.config();
 const cookieParser = require("cookie-parser");
+const connectionDb = require("./config/database"); // MongoDB configuration
 
+dotenv.config();
+
+const authRoutes = require("./routes/UserRoutes");
+const vehicleRoutes = require("./routes/vehicleRoutes");
+const driverRoutes = require("./routes/driverRoutes");
+const tripRoutes = require("./routes/tripRoutes");
+const maintenanceRoutes = require("./routes/maintenanceRoutes");
+const fuelExpenseRoutes = require("./routes/fuelExpenseRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
+const reportRoutes = require("./routes/reportRoutes");
 
 const app = express();
+
+// Middleware
 app.use(cookieParser());
 app.use(express.json());
-app.use(cors());
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    credentials: true,
+  })
+);
+
+// Connect to MongoDB
 connectionDb();
 
+// Mount Routes
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/vehicles", vehicleRoutes);
+app.use("/api/v1/drivers", driverRoutes);
+app.use("/api/v1/trips", tripRoutes);
+app.use("/api/v1/maintenance", maintenanceRoutes);
+app.use("/api/v1", fuelExpenseRoutes); // /fuel-logs and /expenses
+app.use("/api/v1/dashboard", dashboardRoutes);
+app.use("/api/v1/reports", reportRoutes);
 
 app.get("/", (req, res) => {
-    res.send("Backend is running...");
+    res.send("TransitOps Backend is running...");
 });
-app.use('/api/v1',routes);
 
 const PORT = process.env.PORT || 5000;
 

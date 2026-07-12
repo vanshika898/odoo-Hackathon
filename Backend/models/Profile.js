@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 // const Course = require('./Courses');
-const User = require("./UserModel");
+const User = require("./User");
 const profileSchema = new mongoose.Schema(
   {
     image: {

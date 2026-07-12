@@ -1,54 +1,4 @@
-// import React, { useState } from 'react';
-// import Sidebar from './components/Sidebar';
-// import Dashboard from './components/Dashboard';
-// import Fleet from './components/Fleet';
-// import Drivers from './components/Drivers';
-// import Trips from './components/Trips';
-// import Maintenance from './components/Maintenance';
-// import Expenses from './components/Expenses';
-// import Analytics from './components/Analytics';
-// import Settings from './components/Settings';
-// import Login from './components/Login';
-// import './index.css';
-
-// export default function App() {
-//   const [isAuthenticated, setIsAuthenticated] = useState(false);
-//   const [currentTab, setCurrentTab] = useState('Dashboard');
-
-//   if (!isAuthenticated) {
-//     return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
-//   }
-
-//   return (
-//     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)' }}>
-//       <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} />
-      
-//       <div style={{ flex: 1, padding: '40px 60px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
-//         {/* TOP STATUS NAVIGATION BAR HUB */}
-//         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-surface)', padding: '16px 24px', borderRadius: '12px', border: '1px solid var(--border-muted)' }}>
-//           <span style={{ fontWeight: '700', color: 'var(--text-dark)', fontSize: '0.95rem' }}>Active Workspace Context Engine</span>
-//           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.85rem', fontWeight: '600' }}>
-//             <span style={{ color: 'var(--text-muted)' }}>Current Route Layer:</span>
-//             <span style={{ background: '#f1f2f4', padding: '4px 10px', borderRadius: '4px' }}>{currentTab.toUpperCase()}</span>
-//           </div>
-//         </div>
-
-//         {/* CONTROLLER SWITCH CONTAINER VIEWPORT BLOCK */}
-//         {currentTab === 'Dashboard' && <Dashboard />}
-//         {currentTab === 'Fleet' && <Fleet />}
-//         {currentTab === 'Drivers' && <Drivers />}
-//         {currentTab === 'Trips' && <Trips />}
-//         {currentTab === 'Maintenance' && <Maintenance />}
-//         {currentTab === 'Fuel & Expenses' && <Expenses />}
-//         {currentTab === 'Analytics' && <Analytics />}
-//         {currentTab === 'Settings' && <Settings />}
-//       </div>
-//     </div>
-//   );
-// }
-
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
 import Fleet from "./components/Fleet";
@@ -59,44 +9,90 @@ import Expenses from "./components/Expenses";
 import Analytics from "./components/Analytics";
 import Settings from "./components/Settings";
 import Login from "./components/Login";
+import { api } from "./api";
 import "./index.css";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [currentTab, setCurrentTab] = useState("Dashboard");
 
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem("token");
+      if (token) {
+        try {
+          const res = await api.get("/auth/me");
+          if (res.success && res.user) {
+            setUser(res.user);
+            setIsAuthenticated(true);
+          } else {
+            localStorage.removeItem("token");
+          }
+        } catch (error) {
+          console.error("Token verification failed:", error);
+          localStorage.removeItem("token");
+        }
+      }
+      setLoading(false);
+    };
+    checkAuth();
+  }, []);
+
+  const handleLoginSuccess = (userData, token) => {
+    localStorage.setItem("token", token);
+    setUser(userData);
+    setIsAuthenticated(true);
+    setCurrentTab("Dashboard");
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setUser(null);
+    setIsAuthenticated(false);
+  };
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", background: "var(--bg-primary)" }}>
+        <div style={{ color: "var(--text-dark)", fontWeight: "600", fontSize: "1.2rem" }}>Loading Operations Board...</div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
-    return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
+    return <Login onLoginSuccess={handleLoginSuccess} />;
   }
 
   const renderContent = () => {
     switch (currentTab) {
       case "Dashboard":
-        return <Dashboard />;
+        return <Dashboard user={user} />;
 
       case "Fleet":
-        return <Fleet />;
+        return <Fleet user={user} />;
 
       case "Drivers":
-        return <Drivers />;
+        return <Drivers user={user} />;
 
       case "Trips":
-        return <Trips />;
+        return <Trips user={user} />;
 
       case "Maintenance":
-        return <Maintenance />;
+        return <Maintenance user={user} />;
 
       case "Fuel & Expenses":
-        return <Expenses />;
+        return <Expenses user={user} />;
 
       case "Analytics":
-        return <Analytics />;
+        return <Analytics user={user} />;
 
       case "Settings":
-        return <Settings />;
+        return <Settings user={user} setUser={setUser} />;
 
       default:
-        return <Dashboard />;
+        return <Dashboard user={user} />;
     }
   };
 
@@ -111,6 +107,8 @@ export default function App() {
       <Sidebar
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
+        user={user}
+        onLogout={handleLogout}
       />
 
       <div
@@ -141,7 +139,7 @@ export default function App() {
                 marginBottom: "6px",
               }}
             >
-              Welcome Back 👋
+              Welcome Back 👋, {user?.fullName || "Operator"}
             </h2>
 
             <p
@@ -150,7 +148,7 @@ export default function App() {
                 fontSize: ".95rem",
               }}
             >
-              Manage your fleet operations efficiently from one place.
+              Role: <strong style={{ color: "var(--text-dark)" }}>{user?.accountType || "Unassigned"}</strong> | Manage your fleet operations efficiently.
             </p>
           </div>
 
@@ -186,7 +184,6 @@ export default function App() {
         </div>
 
         {/* PAGE CONTENT */}
-
         {renderContent()}
       </div>
     </div>

@@ -10,6 +10,16 @@ const managementTabs = [
   { title: "Analytics", icon: BarChart3 }, { title: "Settings", icon: Settings },
 ];
 
+// Helper to map DB account types to friendly human readable roles
+const roleFriendlyNames = {
+  FleetManager: "Fleet Manager",
+  Driver: "Driver",
+  SafetyOfficer: "Safety Officer",
+  FinancialAnalyst: "Financial Analyst",
+  Dispatcher: "Dispatcher",
+  Admin: "Administrator"
+};
+
 function NavItem({ tab, currentTab, setCurrentTab }) {
   const Icon = tab.icon;
   const active = currentTab === tab.title;
@@ -18,7 +28,16 @@ function NavItem({ tab, currentTab, setCurrentTab }) {
   </button>;
 }
 
-export default function Sidebar({ currentTab, setCurrentTab }) {
+export default function Sidebar({ currentTab, setCurrentTab, user, onLogout }) {
+  const initials = user?.fullName
+    ? user.fullName
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : "OP";
+
   return <aside className="app-sidebar">
     <div>
       <div className="sidebar-brand"><div className="sidebar-brand-mark"><span /><i /></div><div><strong>TransitOps</strong><small>Fleet Command</small></div></div>
@@ -31,8 +50,15 @@ export default function Sidebar({ currentTab, setCurrentTab }) {
       </nav>
     </div>
     <div className="sidebar-bottom">
-      <div className="sidebar-quick-links"><button type="button"><Bell size={16} /><span>Notifications</span><b>3</b></button><button type="button"><CircleHelp size={16} /><span>Help centre</span></button></div>
-      <div className="sidebar-profile"><div className="sidebar-avatar">RK</div><div className="sidebar-profile-copy"><strong>Raven K.</strong><span>Fleet dispatcher</span></div><button type="button" aria-label="Log out"><LogOut size={16} /></button></div>
+      <div className="sidebar-quick-links"><button type="button"><Bell size={16} /><span>Notifications</span><b>0</b></button><button type="button"><CircleHelp size={16} /><span>Help centre</span></button></div>
+      <div className="sidebar-profile">
+        <div className="sidebar-avatar">{initials}</div>
+        <div className="sidebar-profile-copy">
+          <strong>{user?.fullName || "Raven K."}</strong>
+          <span>{roleFriendlyNames[user?.accountType] || user?.accountType || "Operator"}</span>
+        </div>
+        <button type="button" aria-label="Log out" onClick={onLogout}><LogOut size={16} /></button>
+      </div>
     </div>
   </aside>;
 }
