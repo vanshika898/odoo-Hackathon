@@ -1,4 +1,4 @@
-:root {
+/* :root {
   --text: #6b6375;
   --text-h: #08060d;
   --bg: #fff;
@@ -108,4 +108,34 @@ code {
   line-height: 135%;
   padding: 4px 8px;
   background: var(--code-bg);
+} */
+
+
+:root {
+  --bg-primary: #0a0a0c;
+  --bg-surface: #121214;
+  --bg-card: #1e1e24;
+  --accent-odoo: #a65d00;      
+  --accent-hover: #c47202;
+  --border-color: #2d2d34;
+  --text-main: #f3f4f6;
+  --text-muted: #9ca3af;
+
+  --status-available: #3da35d;
+  --status-ontrip: #4da1ff;
+  --status-suspended: #ff8533;
+  --status-retired: #ff6666;
+  --status-draft: #5a5a62;
 }
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+body { background-color: var(--bg-primary); color: var(--text-main); }
+.odoo-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 24px; }
+.status-badge { padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; display: inline-block; text-transform: uppercase; }
+.status-available { background: rgba(61, 163, 93, 0.15); color: var(--status-available); border: 1px solid var(--status-available); }
+.status-ontrip { background: rgba(77, 161, 255, 0.15); color: var(--status-ontrip); border: 1px solid var(--status-ontrip); }
+.status-suspended { background: rgba(255, 133, 51, 0.15); color: var(--status-suspended); border: 1px solid var(--status-suspended); }
+.status-retired { background: rgba(255, 102, 102, 0.15); color: var(--status-retired); border: 1px solid var(--status-retired); }
+.status-draft { background: rgba(90, 90, 98, 0.15); color: var(--text-main); border: 1px solid var(--status-draft); }
+.odoo-input { width: 100%; padding: 12px 16px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); }
+.odoo-input:focus { outline: none; border-color: var(--accent-odoo); }
