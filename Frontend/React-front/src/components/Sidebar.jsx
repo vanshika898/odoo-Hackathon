@@ -1,7 +1,7 @@
 import React from 'react';
 
 export default function Sidebar({ currentTab, setCurrentTab }) {
-  const tabs = ['Dashboard', 'Fleet', 'Drivers', 'Trips', 'Maintenance', 'Fuel & Expenses', 'Analytics'];
+  const tabs = ['Dashboard', 'Fleet', 'Drivers', 'Trips', 'Maintenance', 'Fuel & Expenses', 'Analytics', 'Settings'];
   return (
     <div style={{ width: '260px', background: 'var(--bg-surface)', borderRight: '1px solid var(--border-color)', padding: '30px 20px', display: 'flex', flexDirection: 'column', gap: '30px' }}>
       <h2 style={{ color: '#fff', letterSpacing: '0.5px' }}>TransitOps</h2>

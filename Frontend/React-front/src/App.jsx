@@ -39,6 +39,7 @@ export default function App() {
         {currentTab === 'Maintenance' && <Maintenance />}
         {currentTab === 'Fuel & Expenses' && <Expenses />}
         {currentTab === 'Analytics' && <Analytics />}
+        {currentTab === 'Settings' && <Settings />}
       </div>
     </div>
   );
