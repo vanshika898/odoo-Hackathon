@@ -1,30 +1,34 @@
 const mongoose = require("mongoose");
-// const Course = require('./Courses');
-const User = require("./UserModel");
+
 const profileSchema = new mongoose.Schema(
   {
     image: {
       type: String,
       default: null,
     },
-
     gender: {
       type: String,
       enum: ["Male", "Female", "Other"],
       default: null,
     },
-
     dateOfBirth: {
       type: Date,
       default: null,
     },
-
+    phoneNo: {
+      type: String,
+      default: null,
+    },
     role: {
       type: String,
-      default: "",
+      default: null,
     },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+  }
 );
 
-module.exports = mongoose.model("Profile",profileSchema);
+// Prevent OverwriteModelError
+module.exports =
+  mongoose.models.Profile || mongoose.model("Profile", profileSchema);
