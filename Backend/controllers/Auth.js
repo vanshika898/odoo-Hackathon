@@ -236,51 +236,76 @@ exports.login = async (req, res) => {
 };
 
 //Change password
-// exports.changePassword = async (req, res) => {
-//   try {
-//     //fetech the data from the req ki body
-//     const { email, newPassword, confirmNewPassword } = req.body;
-//     //validate the data
-//     if (!email || !newPassword || !confirmNewPassword) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "All fields are required",
-//       });
-//     }
+exports.changePassword = async (req, res) => {
+  try {
+    // Fetch data
+    const { email, newPassword, confirmNewPassword } = req.body;
 
-//     const userExisting = await user.findOne({ email: email });
-//     if (!userExisting) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "User not found with this email please signup first",
-//       });
-//     }
+    // Validate
+    if (!email || !newPassword || !confirmNewPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+      });
+    }
 
-//     //compare the new password and confirm new password
-//     if (newPassword !== confirmNewPassword) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "New password and confirm new password do not match",
-//       });
-//     }
+    // Check user
+    const existingUser = await User.findOne({ email });
 
-//     if (confirmNewPassword === userExisting.password) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "New password cannot be same as old password",
-//       });
-//     }
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
-//     //hash the new password
-//     const hashNewPassword = await bcrypt.hash(confirmNewPassword, 10);
-//     const updatedUserPassword = await user.findOneAndUpdate(
-//       { password: hashNewPassword },
-//       { new: true },
-//     );
-//   } catch (error) {
-//     return res.status(500).json({
-//       success: false,
-//       message: "Password cannot be changed please try again !!!",
-//     });
-//   }
-// };
+    // Check new passwords match
+    if (newPassword !== confirmNewPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New Password and Confirm Password do not match",
+      });
+    }
+
+    // Check if new password is same as old password
+    const isSamePassword = await bcrypt.compare(
+      newPassword,
+      existingUser.password
+    );
+
+    if (isSamePassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New password cannot be same as old password",
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await User.findOneAndUpdate(
+      { email },
+      {
+        password: hashedPassword,
+      },
+      {
+        new: true,
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Password changed successfully",
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Password could not be changed",
+      error: error.message,
+    });
+  }
+};
